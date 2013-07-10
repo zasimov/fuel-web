@@ -21,6 +21,7 @@ All sizes in megabytes.
 
 import json
 
+from nailgun.database import db
 from nailgun.logger import logger
 from nailgun.errors import errors
 
