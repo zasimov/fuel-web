@@ -38,14 +38,13 @@ class RedHatAccountHandler(JSONHandler):
     validator = RedHatAcountValidator
 
     @content_json
-    def GET(self):
-        account = db().query(RedHatAccount).first()
+    def get(self):
+        account = db.session.query(RedHatAccount).first()
         if not account:
-            raise web.notfound()
+            self.abort(404)
         return self.render(account)
 
-    @content_json
-    def POST(self):
+    def post(self):
         data = self.checked_data()
         release_data = {'release_id': data['release_id']}
         data.pop('release_id')
