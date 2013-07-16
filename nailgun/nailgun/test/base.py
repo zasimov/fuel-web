@@ -710,6 +710,13 @@ def fake_tasks(fake_rpc=True,
     return wrapper
 
 
+def fake_db(*args, **kwargs):
+    def wrapper(func):
+        func = mock.patch('nailgun.db.db')(func)
+        return func
+    return wrapper
+
+
 def reverse(name, kwargs=None):
     urldict = dict(zip(urls[1::2], urls[::2]))
     url = urldict[name]

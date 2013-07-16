@@ -17,6 +17,7 @@
 import json
 import time
 
+import mock
 from mock import patch
 
 from nailgun.settings import settings
@@ -24,11 +25,12 @@ from nailgun.settings import settings
 import nailgun
 import nailgun.rpc as rpc
 from nailgun.task.manager import DeploymentTaskManager
+from nailgun.task.manager import DownloadReleaseTaskManager
 from nailgun.task.fake import FAKE_THREADS
 from nailgun.errors import errors
 from nailgun.test.base import BaseHandlers
 from nailgun.test.base import reverse
-from nailgun.test.base import fake_tasks
+from nailgun.test.base import fake_tasks, fake_db
 from nailgun.api.models import Cluster, Attributes, Task, Notification, Node
 from nailgun.api.models import Release
 
@@ -617,11 +619,11 @@ class TestTaskManagers(BaseHandlers):
 
     @fake_tasks()
     def test_download_release(self):
-        release = self.env.create_release()
-        self.assertEquals(release.state, 'not_available')
-        task = self.env.download_release(release.id)
-        release = self.db.query(Release).get(release.id)
-        self.assertEquals(release.state, 'downloading')
-        self.env.wait_ready(task, timeout=5)
-        release = self.db.query(Release).get(release.id)
-        self.assertEquals(release.state, 'available')
+        with mock.patch('nailgun.task.task.DownloadReleaseTask') as MockClass:
+
+            task_manager = DownloadReleaseTaskManager({})
+            task_manager.execute()
+            self.assertEquals(MockClass.execute.call_count, 1)
+
+        tasks = self.db.query(Task).filter_by(name='download_release').count()
+        self.assertEquals(tasks, 1)
