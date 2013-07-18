@@ -119,22 +119,6 @@ urls = (
         NetworkConfigurationVerifyHandler
     ),
     (
-        '/api/nodes/<int:node_id>/attributes/',
-        NodeAttributesHandler
-    ),
-    (
-        '/api/nodes/<int:node_id>/attributes/defaults/',
-        NodeAttributesDefaultsHandler
-    ),
-    (
-        '/api/nodes/<int:node_id>/attributes/<string:attr_name>/',
-        NodeAttributesByNameHandler
-    ),
-    (
-        '/api/nodes/<int:node_id>/attributes/<string:attr_name>/defaults/',
-        NodeAttributesByNameDefaultsHandler
-    ),
-    (
         '/api/nodes/allocation/stats/',
         NodesAllocationStatsHandler
     ),

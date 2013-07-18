@@ -34,7 +34,6 @@ class RedHatAccountHandler(JSONHandler):
     )
 
     model = RedHatAccount
-
     validator = RedHatAcountValidator
 
     @content_json
@@ -44,6 +43,7 @@ class RedHatAccountHandler(JSONHandler):
             self.abort(404)
         return self.render(account)
 
+    @content_json
     def post(self):
         data = self.checked_data()
         release_data = {'release_id': data['release_id']}

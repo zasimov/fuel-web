@@ -14,10 +14,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import web
 import traceback
+from flask import request
 
-from nailgun.db import db
+from nailgun.database import db
 from nailgun.api.models import Node
 from nailgun.api.validators.node import NodeVolumesValidator
 from nailgun.volumes.manager import VolumeManager
@@ -33,15 +33,15 @@ class NodeDisksHandler(JSONHandler):
     validator = NodeVolumesValidator
 
     @content_json
-    def GET(self, node_id):
+    def get(self, node_id):
         node = self.get_object_or_404(Node, node_id)
         node_volumes = node.attributes.volumes
         return DisksFormatConvertor.format_disks_to_simple(node_volumes)
 
     @content_json
-    def PUT(self, node_id):
+    def put(self, node_id):
         node = self.get_object_or_404(Node, node_id)
-        data = self.validator.validate(web.data())
+        data = self.checked_data()
         if node.cluster:
             node.cluster.add_pending_changes('disks', node_id=node.id)
 
@@ -51,9 +51,10 @@ class NodeDisksHandler(JSONHandler):
         # after
         #   db().commit()
         # it resets to previous state
-        db().query(NodeAttributes).filter_by(node_id=node_id).update(
-            {'volumes': volumes_data})
-        db().commit()
+        db.session.query(NodeAttributes).filter_by(
+            node_id=node_id
+        ).update({'volumes': volumes_data})
+        db.session.commit()
 
         return DisksFormatConvertor.format_disks_to_simple(
             node.attributes.volumes)
@@ -62,10 +63,10 @@ class NodeDisksHandler(JSONHandler):
 class NodeDefaultsDisksHandler(JSONHandler):
 
     @content_json
-    def GET(self, node_id):
+    def get(self, node_id):
         node = self.get_object_or_404(Node, node_id)
         if not node.attributes:
-            return web.notfound()
+            self.abort(404)
 
         volumes = DisksFormatConvertor.format_disks_to_simple(
             node.volume_manager.gen_volumes_info())
@@ -76,7 +77,7 @@ class NodeDefaultsDisksHandler(JSONHandler):
 class NodeVolumesInformationHandler(JSONHandler):
 
     @content_json
-    def GET(self, node_id):
+    def get(self, node_id):
         node = self.get_object_or_404(Node, node_id)
 
         volumes_info = []
@@ -84,8 +85,10 @@ class NodeVolumesInformationHandler(JSONHandler):
             volumes_info = DisksFormatConvertor.get_volumes_info(node)
         except errors.CannotFindVolumesInfoForRole as exc:
             logger.error(traceback.format_exc())
-            raise web.notfound(
-                message='Cannot calculate volumes info. '
-                'Please, add node to a cluster.')
+            self.abort(
+                404,
+                'Cannot calculate volumes info. '
+                'Please, add node to a cluster.'
+            )
 
         return volumes_info
