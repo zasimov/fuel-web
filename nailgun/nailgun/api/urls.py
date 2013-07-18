@@ -179,36 +179,36 @@ urls = (
         VersionHandler
     ),
     (
-        '/logs',
+        '/api/logs',
         LogEntryCollectionHandler
     ),
     (
-        '/logs/package',
+        '/api/logs/package',
         LogPackageHandler
     ),
     (
-        '/logs/sources',
+        '/api/logs/sources',
         LogSourceCollectionHandler
     ),
     (
-        '/logs/sources/nodes/<int:node_id>',
+        '/api/logs/sources/nodes/<int:node_id>',
         LogSourceByNodeCollectionHandler
     ),
     (
-        '/plugins',
+        '/api/plugins',
         PluginCollectionHandler
     ),
     (
-        '/plugins/<int:plugin_id>',
+        '/api/plugins/<int:plugin_id>',
         PluginHandler
     ),
     (
-        '/redhat/account',
+        '/api/redhat/account',
         RedHatAccountHandler
     ),
     # Handlers for openstack testing framework
     (
-        '/ostf/<int:cluster_id>',
+        '/api/ostf/<int:cluster_id>',
         OSTFHandler
     ),
     (

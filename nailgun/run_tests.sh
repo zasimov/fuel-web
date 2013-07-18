@@ -158,7 +158,7 @@ function run_ui_tests {
         fi
         kill -0 $server_pid 2> /dev/null
         if [ $? -eq 0 ]; then
-            echo "Test server started"
+            echo "Test server started ($server_pid)"
             casperjs test --includes=$ui_tests_dir/helpers.js --fail-fast $test_file
             result=$(($result + $?))
             kill $server_pid

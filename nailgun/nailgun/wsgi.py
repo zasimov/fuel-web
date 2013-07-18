@@ -47,11 +47,12 @@ def run_server(debug=False, **kwargs):
     application.run(
         debug=debug,
         host=kwargs.get("host") or settings.LISTEN_ADDRESS,
-        port=kwargs.get("port") or int(settings.LISTEN_PORT)
+        port=kwargs.get("port") or int(settings.LISTEN_PORT),
+        use_reloader=kwargs.get("use_reloader") or False
     )
 
 
-def appstart(keepalive=False):
+def appstart(keepalive=False, reloader=False):
     logger.info("Fuel-Web {0} SHA: {1}\nFuel SHA: {2}".format(
         settings.PRODUCT_VERSION,
         settings.COMMIT_SHA,
@@ -80,7 +81,8 @@ def appstart(keepalive=False):
     run_server(
         host=settings.LISTEN_ADDRESS,
         port=int(settings.LISTEN_PORT),
-        debug=True
+        debug=True,
+        use_reloader=False
     )
 
     logger.info("Stopping WSGI app...")
