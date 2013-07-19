@@ -61,6 +61,8 @@ openstack-glance-2013.1.fuel3.0-mira.3
 openstack-keystone-2013.1.1.fuel3.0-mira.2
 openstack-nova-2013.1.1.fuel3.0-mira.2
 openstack-nova-novncproxy-0.4-8.el6
+openstack-quantum-2013.1.1.fuel3.0-mira.3
+openstack-quantum-openvswitch-2013.1.1.fuel3.0-mira.3
 openstack-swift-1.8.0.fuel3.0-mira.2
 openstack-swift-account-1.8.0.fuel3.0-mira.2
 openstack-swift-container-1.8.0.fuel3.0-mira.2
@@ -91,6 +93,8 @@ python-keystone-2013.1.1.fuel3.0-mira.2
 python-novaclient-2.13.0.fuel3.0-mira.2
 python-pip-0.8-1.el6
 python-qpid-qmf-0.14-14.el6_3
+python-quantum-2013.1.1.fuel3.0-mira.3
+python-quantumclient-2.2.1.fuel3.0-mira.2
 python-setuptools-0.6.10-3.el6
 python-virtualenv-1.7.2-1.el6
 qemu-img-0.12.1.2-2.355.0.1.el6.centos.2
