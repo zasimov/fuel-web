@@ -56,7 +56,7 @@ openssh-server-5.3p1-84.1.el6
 openssl-devel-1.0.0-27.el6_4.2
 openssl098e-0.9.8e-17.el6.centos.2
 openstack-cinder-2013.1.1.fuel3.0-mira.2
-openstack-dashboard-2013.1.0.1-mira.3
+openstack-dashboard-2013.1.0.1-mira.4
 openstack-glance-2013.1.fuel3.0-mira.3
 openstack-keystone-2013.1.1.fuel3.0-mira.2
 openstack-nova-2013.1.1.fuel3.0-mira.2
