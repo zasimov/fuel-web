@@ -96,6 +96,7 @@ enable_outbound_network_for_product_vm() {
 
     # Log in into the VM, bring up the NAT interface, set default gateway, check internet connectivity
     # Looks a bit ugly, but 'end of expect' has to be in the very beginning of the line 
+
     result=$(
         expect << ENDOFEXPECT
         spawn ssh -oConnectTimeout=5 -oStrictHostKeyChecking=no -oCheckHostIP=no -oUserKnownHostsFile=/dev/null $username@$ip
@@ -103,9 +104,13 @@ enable_outbound_network_for_product_vm() {
         expect "*?assword:*"
         send "$password\r"
         expect "$prompt"
-        send "dhclient eth$interface_id\r"
+        send "file=/etc/sysconfig/network-scripts/ifcfg-eth$interface_id; hwaddr=$(grep HWADDR $file); uuid=$(grep UUID $file); echo -e ""$hwaddr"\n"$uuid"\nDEVICE=eth"$interface_id"\nTYPE=Ethernet\nONBOOT=yes\nNM_CONTROLLED=no\nBOOTPROTO=dhcp\nPEERDNS=no" > $file\r"
         expect "$prompt"
-        send "ip route replace default via $gateway_ip dev eth$interface_id\r"
+        send "sed "s/GATEWAY=.*/GATEWAY="${gateway_ip}"/g" -i /etc/sysconfig/network\r"
+        expect "$prompt"
+        send "echo 'nameserver 8.8.8.8' > /etc/dnsmasq.upstream\r"
+        expect "$prompt"
+        send "service network restart; service dnsmasq restart\r"
         expect "$prompt"
         send "ping -c 5 google.com || ping -c 5 wikipedia.com\r"
 	expect "$prompt"
