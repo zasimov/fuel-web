@@ -248,10 +248,8 @@ postgresql-devel-8.4.13-1.el6_3
 postgresql-libs-8.4.13-1.el6_3
 postgresql-server-8.4.13-1.el6_3
 pssh-2.3.1-15.2
-puppet-2.7.19-1.el6
-puppet-server-2.7.19-1.el6
-puppetdb-1.2.0-1.el6
-puppetdb-terminus-1.2.0-1.el6
+puppet-3.2.3-1.el6
+puppet-server-3.2.3-1.el6
 puppetlabs-release-6-6
 pygobject2-2.20.0-5.el6
 pyparsing-1.5.6-1.el6
