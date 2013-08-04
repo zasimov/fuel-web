@@ -14,18 +14,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import sys
-import logging
-from StringIO import StringIO
 from cgitb import html
 import json
-
+import logging
 from logging.handlers import WatchedFileHandler
+import sys
+from StringIO import StringIO
 
 from nailgun.settings import settings
 
-logger = logging.getLogger("nailgun")
-api_logger = logging.getLogger("nailgun-api")
+logger = logging.getLogger('nailgun')
+api_logger = logging.getLogger('nailgun-api')
 
 SERVER_ERROR_MSG = '500 Internal Server Error'
 DATEFORMAT = '%Y-%m-%d %H:%M:%S'
@@ -39,7 +38,7 @@ class WriteLogger(logging.Logger, object):
         self.logger = logger
 
     def write(self, message):
-        if message.strip() != '':
+        if message.strip():
             self.logger(message)
 
 
@@ -54,15 +53,15 @@ class HTTPLoggerMiddleware(object):
 
     def __call__(self, env, start_response):
         env['wsgi.errors'] = WriteLogger(api_logger.error)
-        self.__logging_request(env)
+        self.__log_request(env)
 
         def start_response_with_logging(status, headers, *args):
-            self.__logging_response(env, status)
+            self.__log_response(env, status)
             return start_response(status, headers, *args)
 
         return self.application(env, start_response_with_logging)
 
-    def __logging_response(self, env, response_code):
+    def __log_response(self, env, response_code):
         response_info = "Response code '%s' for %s %s from %s:%s" % (
             response_code,
             env['REQUEST_METHOD'],
@@ -76,11 +75,11 @@ class HTTPLoggerMiddleware(object):
         else:
             api_logger.debug(response_info)
 
-    def __logging_request(self, env):
+    def __log_request(self, env):
         length = int(env.get('CONTENT_LENGTH', 0))
         body = ''
 
-        if length != 0:
+        if length:
             body = env['wsgi.input'].read(length)
             env['wsgi.input'] = StringIO(body)
 
@@ -92,11 +91,10 @@ class HTTPLoggerMiddleware(object):
         except ValueError:
             pass
 
-        request_info = "Request %s %s from %s:%s %s" % (
+        request_info = 'Request %s %s from %s %s' % (
             env['REQUEST_METHOD'],
             env['REQUEST_URI'],
             self.__get_remote_ip(env),
-            env['REMOTE_PORT'],
             body
         )
 
