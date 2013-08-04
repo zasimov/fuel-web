@@ -18,6 +18,8 @@ import sys
 import logging
 from StringIO import StringIO
 from cgitb import html
+import json
+
 from logging.handlers import WatchedFileHandler
 
 from nailgun.settings import settings
@@ -81,6 +83,14 @@ class HTTPLoggerMiddleware(object):
         if length != 0:
             body = env['wsgi.input'].read(length)
             env['wsgi.input'] = StringIO(body)
+
+        try:
+            body_json = json.loads(body)
+            if 'password' in body_json:
+                body_json['password'] = '*****'
+                body = json.dumps(body_json)
+        except ValueError:
+            pass
 
         request_info = "Request %s %s from %s:%s %s" % (
             env['REQUEST_METHOD'],
