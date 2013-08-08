@@ -422,8 +422,9 @@ class DownloadReleaseTaskManager(TaskManager):
 
 
 class RedHatSetupTaskManager(TaskManager):
-    def __init__(self, data):
+    def __init__(self, data, download_release=True):
         self.data = data
+        self.download_release = download_release
 
     def execute(self):
         logger.debug("Creating redhat_setup task")
@@ -450,19 +451,21 @@ class RedHatSetupTaskManager(TaskManager):
             (
                 'redhat_check_credentials',
                 tasks.RedHatCheckCredentialsTask,
-                0.01
+                0.01 if self.download_release else 0.5
             ),
             (
                 'redhat_check_licenses',
                 tasks.RedHatCheckLicensesTask,
-                0.01
-            ),
-            (
+                0.01 if self.download_release else 0.5
+            )
+        ]
+
+        if self.download_release:
+            subtasks_to_create.append((
                 'redhat_download_release',
                 tasks.RedHatDownloadReleaseTask,
                 1
-            )
-        ]
+            ))
 
         messages = []
         for task_name, task_class, weight in subtasks_to_create:

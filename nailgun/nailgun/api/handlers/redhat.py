@@ -89,12 +89,14 @@ class RedHatSetupHandler(JSONHandler):
         account = db().query(RedHatAccount).first()
         if account:
             db().query(RedHatAccount).update(data)
+            download_release = False
         else:
             account = RedHatAccount(**data)
             db().add(account)
+            download_release = True
         db().commit()
 
-        task_manager = RedHatSetupTaskManager(release_data)
+        task_manager = RedHatSetupTaskManager(release_data, download_release)
         try:
             task = task_manager.execute()
         except Exception as exc:
