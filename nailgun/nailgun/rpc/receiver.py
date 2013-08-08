@@ -659,6 +659,8 @@ class NailgunReceiver(object):
                 error_msg = 'Failed to check Red Hat licenses '
             if error_msg != 'Task aborted':
                 notifier.notify('error', error_msg)
+        else:
+            cls._update_release_state(release_id, 'available')
 
         if notify:
             notifier.notify('error', notify)

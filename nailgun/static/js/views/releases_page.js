@@ -109,8 +109,10 @@ function(commonViews, dialogViews, releasesListTemplate, releaseTemplate) {
             }
         },
         render: function() {
+            var task = this.page.tasks.findTask({name: 'redhat_setup', status: 'running', release: this.release.id});
+            var taskRunning = true ? task : false;
             this.tearDownRegisteredSubViews();
-            this.$el.html(this.template({release: this.release}));
+            this.$el.html(this.template({release: this.release, taskRunning: taskRunning}));
             this.updateProgress();
             return this;
         }

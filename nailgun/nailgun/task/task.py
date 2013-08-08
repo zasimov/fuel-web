@@ -820,14 +820,22 @@ class RedHatTask(object):
         db().commit()
         rpc.cast('naily', message)
 
+    @classmethod
+    def _update_release_state(cls, release_id, state):
+        logger.debug("Set release '%s' state to '%s'" % (release_id, state))
+        release = db().query(Release).get(release_id)
+        release.state = state
+        db().commit()
+
 
 class RedHatDownloadReleaseTask(RedHatTask):
 
     @classmethod
     def message(cls, task, data):
         # TODO: fix this ugly code
-        cls.__update_release_state(
-            data["release_id"]
+        cls._update_release_state(
+            data["release_id"],
+            'downloading'
         )
         return {
             'method': 'download_release',
@@ -837,12 +845,6 @@ class RedHatDownloadReleaseTask(RedHatTask):
                 'release_info': data
             }
         }
-
-    @classmethod
-    def __update_release_state(cls, release_id):
-        release = db().query(Release).get(release_id)
-        release.state = 'downloading'
-        db().commit()
 
 
 class RedHatCheckCredentialsTask(RedHatTask):
@@ -857,6 +859,14 @@ class RedHatCheckCredentialsTask(RedHatTask):
                 "release_info": data
             }
         }
+
+    @classmethod
+    def execute(cls, task, data):
+        cls._update_release_state(
+            data["release_id"],
+            'verifying'
+        )
+        RedHatCheckCredentialsTask.execute(cls, task, data)
 
 
 class RedHatCheckLicensesTask(RedHatTask):
@@ -874,3 +884,11 @@ class RedHatCheckLicensesTask(RedHatTask):
         if nodes:
             msg['args']['nodes'] = nodes
         return msg
+
+    @classmethod
+    def execute(cls, task, data):
+        cls._update_release_state(
+            data["release_id"],
+            'verifying'
+        )
+        RedHatCheckLicensesTask.execute(cls, task, data)

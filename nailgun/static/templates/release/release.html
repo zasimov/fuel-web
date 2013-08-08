@@ -9,7 +9,7 @@
       <div class="bar-title">Downloading: <span>0%</span></div>
     </div>
   <% } else { %>
-    <% var stateMessages = {'available': 'Active', 'error': 'Error', 'not_available': 'Not available', 'downloading': 'Downloading'};
+    <% var stateMessages = {'available': 'Active', 'error': 'Error', 'not_available': 'Not available', 'downloading': 'Downloading', 'verifying': 'Verifying'};
        var state = stateMessages[release.get('state')];
     %>
     <span class="<%- release.get('state') %>"> <%= state %></span>
