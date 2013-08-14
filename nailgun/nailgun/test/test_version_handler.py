@@ -15,8 +15,6 @@
 #    under the License.
 
 import json
-import logging
-import unittest
 from mock import patch
 
 from nailgun.settings import settings

@@ -14,11 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-import time
-
-from mock import patch
-
 from nailgun.settings import settings
 
 import nailgun

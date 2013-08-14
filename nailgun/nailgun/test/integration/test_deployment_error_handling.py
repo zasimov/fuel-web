@@ -15,11 +15,6 @@
 #    under the License.
 
 import re
-import json
-import time
-from functools import partial
-
-from mock import patch
 
 from nailgun.settings import settings
 

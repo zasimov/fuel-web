@@ -28,10 +28,10 @@ import logging
 import mock
 from random import randint
 from datetime import datetime
-from functools import partial, wraps
+from functools import partial
 from itertools import izip
 
-from paste.fixture import TestApp, AppError
+from paste.fixture import TestApp
 
 import nailgun
 from nailgun.api.models import Node
@@ -603,7 +603,6 @@ class BaseHandlers(TestCase):
         cls.db = db()
         cls.app = TestApp(build_app().wsgifunc())
         nailgun.task.task.DeploymentTask._prepare_syslog_dir = mock.Mock()
-        # dropdb()
         syncdb()
 
     @classmethod

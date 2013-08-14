@@ -13,10 +13,6 @@
 #    under the License.
 
 import json
-from paste.fixture import TestApp
-import shlex
-
-import mock
 from mock import patch
 
 import nailgun

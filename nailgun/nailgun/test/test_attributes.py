@@ -15,7 +15,6 @@
 #    under the License.
 
 import json
-from paste.fixture import TestApp
 from nailgun.api.models import Cluster
 from nailgun.api.models import Node
 from nailgun.api.models import Release

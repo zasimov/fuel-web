@@ -15,8 +15,6 @@
 #    under the License.
 
 import json
-import unittest
-from paste.fixture import TestApp
 
 from mock import patch
 from sqlalchemy.sql import not_

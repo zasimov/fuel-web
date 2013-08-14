@@ -16,8 +16,6 @@
 
 import json
 
-from paste.fixture import TestApp
-
 from nailgun.test.base import BaseHandlers
 from nailgun.test.base import reverse
 from nailgun.api.models import Node, Notification

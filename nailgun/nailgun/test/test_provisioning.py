@@ -14,9 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-import logging
-import unittest
 from mock import patch
 
 from nailgun.settings import settings

@@ -16,7 +16,7 @@
 
 import logging
 
-from mock import Mock, patch
+from mock import patch
 
 import nailgun
 from nailgun.test.base import BaseHandlers
