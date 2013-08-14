@@ -17,9 +17,7 @@
 import json
 import unittest
 
-from paste.fixture import TestApp
-from mock import Mock, patch
-from netaddr import IPNetwork, IPAddress
+from mock import patch
 from sqlalchemy.sql import not_
 
 import nailgun
