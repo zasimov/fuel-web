@@ -148,8 +148,32 @@ define(['utils'], function(utils) {
         constructorName: 'Nodes',
         model: models.Node,
         url: '/api/nodes',
+        filters: function() {
+            return [
+                {
+                    type: 'attributes',
+                    label: 'Sort by node',
+                    values: ['status', 'pending_addition']
+                },
+                {
+                    type: 'roles',
+                    label: 'Show',
+                    values: this.assignedRoles()
+                }
+            ];
+        },
+        filterByRoles: function(role) {
+            return this.filter(function(node) {return _.contains(node.get('roles'), role);});
+        },
+        assignedRoles: function() {
+            var roles = [];
+            this.each(function(node) {
+                roles = _.union(roles, node.get('roles'));
+            }, this);
+            return _.uniq(roles);
+        },
         comparator: function(node) {
-            return node.id;
+            return node.get('status');
         },
         hasChanges: function() {
             return !!this.filter(function(node) {

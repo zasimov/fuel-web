@@ -1,0 +1,10 @@
+<span class="title">Assign Roles to Selected Nodes</span>
+<% _.each(roles, function(role) { %>
+  <label>
+    <input type="checkbox" value="<%= role %>" <%= node && _.contains(node.get('roles'), role) ? 'checked' : '' %> />
+    <%= role %>
+  </label>
+<% }) %>
+<hr/>
+<button class="btn btn-close">Cancel</button>
+<button class="btn btn-success btn-assign" disabled>Assign</button>

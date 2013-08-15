@@ -422,7 +422,6 @@ h6.page-title {
 .node {
   display: block;
   width: auto;
-  height: 56px;
   background-color: #ffffff;
   padding: 2px;
   box-sizing: border-box;
@@ -602,13 +601,20 @@ h6.page-title {
   width: 22px;
   overflow: hidden;
   float: right;
-  background-image: url(/static/img/cogwheel_icon.png);
   margin: 13px 13px 0px 14px;
+  background-image: url(/static/img/cogwheel_icon.png);
   cursor: pointer;
 }
+
 .node-settings:hover {
   background: url(/static/img/cogwheel_icon.png) 0px -22px no-repeat;
 }
+
+.node-content.unallocated .node-settings {
+  background-image: none;
+  cursor: default;
+}
+
 .node-name > .name {
   display: block;
   overflow: hidden;
@@ -653,6 +659,16 @@ h6.page-title {
 }
 
 /* === Node Block End === */
+
+.nodes-screen {
+  padding: 0 23px;
+}
+
+.node .name input {
+  height: 11px;
+  font-size: 12px;
+  width: 90%;
+}
 
 .node-logo {
   display: block;
@@ -974,6 +990,13 @@ h6.page-title {
   color: #1e486f;
 }
 */
+
+.roles-panel {
+  clear: both;
+  width: 100%;
+  border: 1px solid #aaa;
+  padding: 5px;
+}
 
 .manufacturer-hp {
   background: url(../img/node_manufacturer_logos.png) 0px 0px no-repeat;

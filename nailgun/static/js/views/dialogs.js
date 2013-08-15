@@ -27,9 +27,10 @@ define(
     'text!templates/dialogs/remove_cluster.html',
     'text!templates/dialogs/error_message.html',
     'text!templates/dialogs/show_node.html',
-    'text!templates/dialogs/dismiss_settings.html'
+    'text!templates/dialogs/dismiss_settings.html',
+    'text!templates/dialogs/confirm_nodes_deletion.html'
 ],
-function(require, utils, models, simpleMessageTemplate, createClusterDialogTemplate, rhelCredentialsDialogTemplate, changeClusterModeDialogTemplate, discardChangesDialogTemplate, displayChangesDialogTemplate, removeClusterDialogTemplate, errorMessageTemplate, showNodeInfoTemplate, discardSettingsChangesTemplate) {
+function(require, utils, models, simpleMessageTemplate, createClusterDialogTemplate, rhelCredentialsDialogTemplate, discardChangesDialogTemplate, displayChangesDialogTemplate, removeClusterDialogTemplate, errorMessageTemplate, showNodeInfoTemplate, discardSettingsChangesTemplate, confirmNodesDeletionTemplate) {
     'use strict';
 
     var views = {};
@@ -467,6 +468,41 @@ function(require, utils, models, simpleMessageTemplate, createClusterDialogTempl
                 verification: this.verification || false
             });
             return this;
+        }
+    });
+
+    views.ConfirmNodesDeletionDialog = views.Dialog.extend({
+        template: _.template(confirmNodesDeletionTemplate),
+        events: {
+            'click .btn-delete': 'deleteNodes'
+        },
+        initialize: function(options) {
+            _.defaults(this, options);
+        },
+        deleteNodes: function() {
+            this.$('.btn-delete').prop('disabled', true);
+            this.nodes.each(function(node) {
+                node.set({
+                    roles: [],
+                    cluster_id: null,
+                    pending_addition: false,
+                    pending_deletion: true
+                });
+            });
+            this.nodes.toJSON = function(options) {
+                return this.map(function(node) {
+                    return _.pick(node.attributes, 'id', 'cluster_id', 'role', 'pending_addition', 'pending_deletion');
+                });
+            };
+            this.nodes.sync('update', this.nodes).done(_.bind(function() {
+                this.$el.modal('hide');
+                app.page.tab.model.fetch();
+                app.page.tab.model.fetchRelated('nodes');
+                app.page.tab.screen.render(); // after fetch?!
+                app.navbar.refresh();
+                app.page.removeFinishedTasks();
+            }, this))
+            .fail(_.bind(this.displayErrorMessage, this));
         }
     });
 

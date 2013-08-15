@@ -1,0 +1,10 @@
+<%= filter.label %>
+<select data-type="<%= filter.type %>">
+  <%if (filter.type == 'roles') { %>
+    <option value="all">All Roles</option>
+  <% } %>
+  <% var labels = {status: 'Status', pending_addition: 'Pending addition flag'} %>
+  <% _.each(filter.values, function(value) { %>
+    <option value="<%= value %>"><%= filter.type == 'attributes' ? labels[value] || value : value %></option>
+  <% }) %>
+</select>
