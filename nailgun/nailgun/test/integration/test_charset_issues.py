@@ -23,13 +23,13 @@ import nailgun.rpc as rpc
 from nailgun.task.manager import DeploymentTaskManager
 from nailgun.task.fake import FAKE_THREADS
 from nailgun.test.base import Environment
-from nailgun.test.base import BaseHandlers
+from nailgun.test.base import BaseIntegrationTest
 from nailgun.test.base import reverse
 from nailgun.test.base import fake_tasks
 from nailgun.api.models import Cluster, Attributes, Task, Notification, Node
 
 
-class TestCharsetIssues(BaseHandlers):
+class TestCharsetIssues(BaseIntegrationTest):
 
     def tearDown(self):
         self._wait_for_threads()

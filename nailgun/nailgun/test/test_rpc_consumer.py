@@ -15,9 +15,9 @@
 #    under the License.
 
 import json
-import time
 import uuid
 
+import mock
 from mock import patch
 
 import nailgun.rpc as rpc
@@ -33,6 +33,7 @@ from nailgun.api.models import Attributes
 from nailgun.api.models import Network
 from nailgun.api.models import NetworkGroup
 from nailgun.api.models import IPAddr
+from nailgun.api.models import Release
 from nailgun.api.models import Vlan
 
 
@@ -609,3 +610,34 @@ class TestConsumer(BaseHandlers):
             .join(NetworkGroup).\
             filter(NetworkGroup.cluster_id == cluster_db.id).all()
         self.assertNotEqual(len(nets_db), 0)
+
+    @patch('nailgun.task.helpers.TaskHelper')
+    def test_receiver_download_release_resp(self, task_helper):
+        kwargs = {'task_uuid': 'uuid',
+                  'progress': 100,
+                  'status': 'error',
+                  'error': 'test error',
+                  'release_info': {'release_id': 1}
+                  }
+
+        patched_method = 'nailgun.rpc.receiver.NailgunReceiver' + \
+            '._download_release_completed'
+        with patch(patched_method) as MockClass:
+            self.receiver._download_release_completed = mock.Mock()
+            self.receiver.download_release_resp(**kwargs)
+            MockClass._download_release_completed.assert_called()
+            task_helper.update_task_status.assert_called()
+
+            kwargs['progress'] = 10
+            self.receiver.download_release_resp(**kwargs)
+            self.assertFalse(MockClass._download_release_completed.called)
+            task_helper.update_task_status.assert_called()
+
+    def test_download_release_completed(self):
+        release = self.env.create_release(api=False)
+
+        with patch('nailgun.notifier.notify') as notify_mock:
+            self.receiver._download_release_completed(release.id)
+            notify_mock.notify.assert_called()
+            release_from_db = self.db.query(Release).get(release.id)
+            self.assertEquals(release_from_db.state, 'available')
