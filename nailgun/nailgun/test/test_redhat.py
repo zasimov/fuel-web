@@ -13,6 +13,7 @@
 #    under the License.
 
 import json
+from mock import Mock
 from mock import patch
 
 import nailgun
@@ -22,6 +23,7 @@ from nailgun.api.handlers.redhat import RedHatSetupHandler
 from nailgun.api.handlers.redhat import RedHatAccountHandler
 from nailgun.task.manager import RedHatSetupTaskManager
 from nailgun.api.models import RedHatAccount
+from nailgun.api.models import Task
 from nailgun.test.base import BaseHandlers
 from nailgun.test.base import fake_tasks
 from nailgun.test.base import reverse
@@ -72,14 +74,19 @@ class TestHandlers(BaseHandlers):
 
     @fake_tasks()
     def test_redhat_account_validation_success(self):
-        resp = self.app.post(
-            reverse('RedHatSetupHandler'),
-            json.dumps({'license_type': 'rhsm',
-                        'username': 'rheltest',
-                        'password': 'password',
-                        'release_id': self.release.id}),
-            headers=self.default_headers)
-        self.assertEquals(resp.status, 202)
+        with patch('nailgun.api.handlers.redhat.db', Mock()) as db:
+            with patch('nailgun.api.handlers.redhat.RedHatSetupTaskManager', Mock()) as mng:
+                task = Task()
+                task.id = 0
+                mng.return_value.execute.return_value = task
+                resp = self.app.post(
+                    reverse('RedHatSetupHandler'),
+                    json.dumps({'license_type': 'rhsm',
+                                'username': 'rheltest',
+                                'password': 'password',
+                                'release_id': self.release.id}),
+                    headers=self.default_headers)
+                self.assertEquals(resp.status, 202)
 
     @fake_tasks()
     def test_redhat_account_validation_failure(self):
