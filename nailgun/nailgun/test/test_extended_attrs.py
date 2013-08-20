@@ -50,5 +50,12 @@ class TestExtendedAttrs(BaseHandlers):
             lambda t: t["method"] == "deploy",
             args[1]
         )[0]
-        print deployment_task["args"]["nodes"]
-        raise
+
+        self.assertIn(
+            "bridges",
+            deployment_task["args"]["nodes"][0]
+        )
+        self.assertEqual(
+            ["br0", "br1"],
+            deployment_task["args"]["nodes"][0]["bridges"]
+        )

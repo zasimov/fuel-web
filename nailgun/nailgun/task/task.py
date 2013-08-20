@@ -120,7 +120,7 @@ class DeploymentTask(object):
                 )
             else:
                 merged[node["id"]] = node
-        return merged.items()
+        return merged.values()
 
     @classmethod
     def _extend_attrs(cls, attrs, extended_attrs):
@@ -152,7 +152,6 @@ class DeploymentTask(object):
 
         for attr, val in extended.iteritems():
             basic[attr] = cls._extend_attrs(basic[attr], val)
-
         return basic
 
     @classmethod
