@@ -20,9 +20,26 @@ from nailgun.api.validators.base import BasicValidator
 
 
 class ClusterValidator(BasicValidator):
+
+    @classmethod
+    def _validate_common(cls, data):
+        d = cls.validate_json(data)
+        if d.get("release"):
+            release = db().query(Release).get(d.get("release"))
+            if not release:
+                raise errors.InvalidData(
+                    "Invalid release id",
+                    log_message=True
+                )
+        if d.get("extended_attrs"):
+            ExtendedAttributesValidator.validate(
+                d.get("extended_attrs")
+            )
+        return d
+
     @classmethod
     def validate(cls, data):
-        d = cls.validate_json(data)
+        d = cls._validate_common(data)
         if d.get("name"):
             if db().query(Cluster).filter_by(
                 name=d["name"]
@@ -31,14 +48,11 @@ class ClusterValidator(BasicValidator):
                     "Environment with this name already exists",
                     log_message=True
                 )
-        if d.get("release"):
-            release = db().query(Release).get(d.get("release"))
-            if not release:
-                raise errors.InvalidData(
-                    "Invalid release id",
-                    log_message=True
-                )
         return d
+
+    @classmethod
+    def validate_update(cls, data):
+        return cls._validate_common(data)
 
 
 class AttributesValidator(BasicValidator):
@@ -68,3 +82,39 @@ class AttributesValidator(BasicValidator):
         d = cls.validate_json(data)
         if "generated" in d:
             cls.traverse(d["generated"])
+
+
+class ExtendedAttributesValidator(BasicValidator):
+    @classmethod
+    def validate(cls, data):
+        if not isinstance(data, dict):
+            raise errors.InvalidData(
+                "Extended attributes should be a dictionary",
+                log_message=True
+            )
+
+        subset = set(data.keys()) <= set(('nodes', 'attributes'))
+        if not subset:
+            raise errors.InvalidData(
+                "Extended attributes include bad attrs: {0}".format(
+                    ", ".join(bad_attrs)
+                ),
+                log_message=True
+            )
+
+        if data.get("nodes"):
+            if not isinstance(data.get("nodes"), list):
+                raise errors.InvalidData(
+                    "Extended attributes include "
+                    "incorrect list of nodes",
+                    log_message=True
+                )
+            for node in data.get("nodes"):
+                if "id" not in node:
+                    raise errors.InvalidData(
+                        "Extended attributes include "
+                        "nodes without ID specified",
+                        log_message=True
+                    )
+
+

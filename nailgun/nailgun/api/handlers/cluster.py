@@ -57,6 +57,7 @@ class ClusterHandler(JSONHandler):
         "name",
         "mode",
         "status",
+        "extended_attrs",
         ("release", "*")
     )
 
@@ -97,7 +98,9 @@ class ClusterHandler(JSONHandler):
                * 404 (cluster not found in db)
         """
         cluster = self.get_object_or_404(Cluster, cluster_id)
-        data = self.checked_data()
+        data = self.checked_data(
+            self.validator.validate_update
+        )
         network_manager = NetworkManager()
 
         for key, value in data.iteritems():

@@ -24,6 +24,7 @@ import signal
 import subprocess
 import shlex
 import json
+from copy import deepcopy
 
 import web
 import netaddr
@@ -109,7 +110,53 @@ class DeploymentTask(object):
 #   those which are prepared for removal.
 
     @classmethod
-    def message(cls, task):
+    def _extend_nodes(cls, nodes, extended_nodes):
+        merged = {}
+        for node in itertools.chain(nodes, extended_nodes):
+            if node["id"] in merged:
+                merged[node["id"]] = cls._extend_attrs(
+                    merged[node["id"]],
+                    node
+                )
+            else:
+                merged[node["id"]] = node
+        return merged.items()
+
+    @classmethod
+    def _extend_attrs(cls, attrs, extended_attrs):
+        if isinstance(attrs, list):
+            return [
+                cls._extend_attrs(i, j)
+                for i, j in zip(attrs, extended_attrs)
+            ]
+        if not isinstance(attrs, dict):
+            return attrs
+        result = deepcopy(attrs)
+        for k, v in extended_attrs.iteritems():
+            if k in result and isinstance(result[k], dict):
+                    result[k] = self._dict_merge(result[k], v)
+            else:
+                result[k] = deepcopy(v)
+        return result
+
+    @classmethod
+    def _extend(cls, basic, extended):
+        """
+        Used for merging extended attributes into basic ones
+        """
+        extended_nodes = extended.pop("nodes", [])
+        basic["nodes"] = cls._extend_nodes(
+            basic["nodes"],
+            extended_nodes
+        )
+
+        for attr, val in extended.iteritems():
+            basic[attr] = cls._extend_attrs(basic[attr], val)
+
+        return basic
+
+    @classmethod
+    def message(cls, task, use_extended=True):
         logger.debug("DeploymentTask.message(task=%s)" % task.uuid)
         task_uuid = task.uuid
         cluster_id = task.cluster.id
@@ -190,14 +237,21 @@ class DeploymentTask(object):
         cluster_attrs['deployment_mode'] = task.cluster.mode
         cluster_attrs['deployment_id'] = cluster_id
 
+        args = {
+            'task_uuid': task.uuid,
+            'nodes': nodes_with_attrs,
+            'attributes': cluster_attrs
+        }
+        if use_extended:
+            args = cls._extend(
+                args,
+                task.cluster.extended_attrs
+            )
+
         message = {
             'method': 'deploy',
             'respond_to': 'deploy_resp',
-            'args': {
-                'task_uuid': task.uuid,
-                'nodes': nodes_with_attrs,
-                'attributes': cluster_attrs
-            }
+            'args': args
         }
 
         return message
