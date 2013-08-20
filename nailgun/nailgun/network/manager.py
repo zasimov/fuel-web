@@ -124,9 +124,14 @@ class NetworkManager(object):
             free_cidrs = sorted(list(nets_free_set._cidrs))
             new_net = None
             for fcidr in free_cidrs:
-                for n in fcidr.subnet(24, count=1):
-                    new_net = n
-                    break
+                if network['access'] == u'public':
+                    for n in fcidr.subnet(25, count=1):
+                        new_net = n
+                        break
+                else:
+                    for n in fcidr.subnet(24, count=1):
+                        new_net = n
+                        break
                 if new_net:
                     break
             if not new_net:
@@ -152,6 +157,8 @@ class NetworkManager(object):
             db().commit()
             nw_group.ip_ranges.append(new_ip_range)
             db().commit()
+            if network['access'] == u'public':
+                nw_group.network_size = 127
             self.create_networks(nw_group)
 
             used_vlans.append(vlan_start)
