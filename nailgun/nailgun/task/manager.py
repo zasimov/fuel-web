@@ -18,7 +18,6 @@ import uuid
 import logging
 import itertools
 import traceback
-from copy import deepcopy
 
 import web
 

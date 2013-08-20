@@ -39,7 +39,10 @@ class TestExtendedAttrs(BaseHandlers):
         cluster_db.extended_attrs = {
             "nodes": [
                 {"id": node_db.id, "bridges": ["br0", "br1"]}
-            ]
+            ],
+            "attributes": {
+                "deployment_mode": "ha_full"
+            }
         }
         self.db.commit()
 
@@ -58,4 +61,8 @@ class TestExtendedAttrs(BaseHandlers):
         self.assertEqual(
             ["br0", "br1"],
             deployment_task["args"]["nodes"][0]["bridges"]
+        )
+        self.assertEqual(
+            "ha_full",
+            deployment_task["args"]["attributes"]["deployment_mode"]
         )

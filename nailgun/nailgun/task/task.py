@@ -120,7 +120,7 @@ class DeploymentTask(object):
                 )
             else:
                 merged[node["id"]] = node
-        return merged.values()
+        return sorted(merged.values(), key=lambda n: n["id"])
 
     @classmethod
     def _extend_attrs(cls, attrs, extended_attrs):
@@ -134,7 +134,7 @@ class DeploymentTask(object):
         result = deepcopy(attrs)
         for k, v in extended_attrs.iteritems():
             if k in result and isinstance(result[k], dict):
-                    result[k] = self._dict_merge(result[k], v)
+                result[k] = cls._extend_attrs(result[k], v)
             else:
                 result[k] = deepcopy(v)
         return result

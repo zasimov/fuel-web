@@ -116,5 +116,3 @@ class ExtendedAttributesValidator(BasicValidator):
                         "nodes without ID specified",
                         log_message=True
                     )
-
-
