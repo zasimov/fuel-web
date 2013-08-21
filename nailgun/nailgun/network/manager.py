@@ -141,13 +141,16 @@ class NetworkManager(object):
                 first=str(new_net[2]),
                 last=str(new_net[-2])
             )
-
+            # required to cover floating network with
+            # netmask of public network
+            netmask = new_net.netmask \
+                if network['name'] != u'public' else "255.255.255.0"
             nw_group = NetworkGroup(
                 release=cluster_db.release.id,
                 name=network['name'],
                 access=network['access'],
                 cidr=str(new_net),
-                netmask=str(new_net.netmask),
+                netmask=str(netmask),
                 gateway=str(new_net[1]),
                 cluster_id=cluster_id,
                 vlan_start=vlan_start,
@@ -157,6 +160,8 @@ class NetworkManager(object):
             db().commit()
             nw_group.ip_ranges.append(new_ip_range)
             db().commit()
+            # required to fit floating network
+            # in public network, each with /25 range
             if network['access'] == u'public':
                 nw_group.network_size = 127
             self.create_networks(nw_group)
