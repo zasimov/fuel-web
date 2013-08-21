@@ -100,6 +100,7 @@ class NetworkConfigurationHandler(JSONHandler):
         cluster = self.get_object_or_404(Cluster, cluster_id)
         return self.serializer.serialize_for_cluster(cluster)
 
+    @content_json
     def PUT(self, cluster_id):
         """
         :returns: JSONized Task object.

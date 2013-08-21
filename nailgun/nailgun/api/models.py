@@ -108,8 +108,8 @@ class Cluster(Base):
     tasks = relationship("Task", backref="cluster", cascade="delete")
     attributes = relationship("Attributes", uselist=False,
                               backref="cluster", cascade="delete")
-    changes = relationship("ClusterChanges", backref="cluster",
-                           cascade="delete")
+    changes_list = relationship("ClusterChanges", backref="cluster",
+                                cascade="delete")
     # We must keep all notifications even if cluster is removed.
     # It is because we want user to be able to see
     # the notification history so that is why we don't use
@@ -119,6 +119,30 @@ class Cluster(Base):
     notifications = relationship("Notification", backref="cluster")
     network_groups = relationship("NetworkGroup", backref="cluster",
                                   cascade="delete")
+
+    @property
+    def changes(self):
+        res = []
+        for ch in self.changes_list:
+            ch_info = [ch.name]
+            if ch.node_id:
+                ch_info.append(ch.node_id)
+            res.append(ch_info)
+        return res
+
+    @changes.setter
+    def changes(self, new_changes):
+        for change in self.changes_list:
+            db().delete(change)
+        db().flush()
+        for change in new_changes:
+            ch = ClusterChanges()
+            ch.name = change.pop(0)
+            if change:
+                ch.node_id = change.pop(0)
+            db().add(ch)
+            self.changes_list.append(ch)
+        db().flush()
 
     @property
     def full_name(self):

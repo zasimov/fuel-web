@@ -20,8 +20,10 @@ Handlers dealing with clusters
 
 import json
 import traceback
+
 import web
 import netaddr
+from sqlalchemy.exc import DataError
 
 from nailgun.db import db
 from nailgun.settings import settings
@@ -57,26 +59,12 @@ class ClusterHandler(JSONHandler):
         "name",
         "mode",
         "status",
-        ("release", "*")
+        "changes",
+        "release_id"
     )
 
     model = Cluster
     validator = ClusterValidator
-
-    @classmethod
-    def render(cls, instance, fields=None):
-        json_data = JSONHandler.render(instance, fields=cls.fields)
-        if instance.changes:
-            for i in instance.changes:
-                if not i.node_id:
-                    json_data.setdefault("changes", []).append(i.name)
-                else:
-                    json_data.setdefault("changes", []).append(
-                        [i.name, i.node_id]
-                    )
-        else:
-            json_data["changes"] = []
-        return json_data
 
     @content_json
     def GET(self, cluster_id):
@@ -97,7 +85,10 @@ class ClusterHandler(JSONHandler):
                * 404 (cluster not found in db)
         """
         cluster = self.get_object_or_404(Cluster, cluster_id)
-        data = self.checked_data()
+        data = self.checked_data(
+            self.validator.validate_update
+        )
+        data.pop("id", None)
         network_manager = NetworkManager()
 
         for key, value in data.iteritems():
@@ -125,7 +116,13 @@ class ClusterHandler(JSONHandler):
                     )
                     network_manager.assign_networks_to_main_interface(node.id)
             else:
-                setattr(cluster, key, value)
+                try:
+                    setattr(cluster, key, value)
+                except DataError:
+                    db().rollback()
+                    raise web.badrequest(
+                        u"Invalid value for '{0}'".format(key)
+                    )
         db().commit()
         return self.render(cluster)
 

@@ -20,9 +20,22 @@ from nailgun.api.validators.base import BasicValidator
 
 
 class ClusterValidator(BasicValidator):
+
+    @classmethod
+    def _validate_common(cls, data):
+        d = cls.validate_json(data)
+        if d.get("release"):
+            release = db().query(Release).get(d.get("release"))
+            if not release:
+                raise errors.InvalidData(
+                    "Invalid release id",
+                    log_message=True
+                )
+        return d
+
     @classmethod
     def validate(cls, data):
-        d = cls.validate_json(data)
+        d = cls._validate_common(data)
         if d.get("name"):
             if db().query(Cluster).filter_by(
                 name=d["name"]
@@ -31,13 +44,11 @@ class ClusterValidator(BasicValidator):
                     "Environment with this name already exists",
                     log_message=True
                 )
-        if d.get("release"):
-            release = db().query(Release).get(d.get("release"))
-            if not release:
-                raise errors.InvalidData(
-                    "Invalid release id",
-                    log_message=True
-                )
+        return d
+
+    @classmethod
+    def validate_update(cls, data):
+        d = cls._validate_common(data)
         return d
 
 

@@ -40,7 +40,7 @@ class TestHandlers(BaseHandlers):
         response = json.loads(resp.body)
         self.assertEquals(cluster.id, response['id'])
         self.assertEquals(cluster.name, response['name'])
-        self.assertEquals(cluster.release.id, response['release']['id'])
+        self.assertEquals(cluster.release.id, response['release_id'])
 
     def test_cluster_creation(self):
         release = self.env.create_release(api=False)
@@ -56,7 +56,7 @@ class TestHandlers(BaseHandlers):
         self.assertEquals(201, resp.status)
         response = json.loads(resp.body)
         self.assertEquals(yet_another_cluster_name, response['name'])
-        self.assertEquals(release.id, response['release']['id'])
+        self.assertEquals(release.id, response['release_id'])
 
     def test_cluster_update(self):
         updated_name = u'Updated cluster'

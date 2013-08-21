@@ -62,13 +62,12 @@ def forbid_client_caching(handler):
 
 @decorator
 def content_json(func, *args, **kwargs):
-    web.header('Content-Type', 'application/json')
+    web.header('Content-Type', 'application/json; charset=utf-8')
     data = func(*args, **kwargs)
     return build_json_response(data)
 
 
 def build_json_response(data):
-    web.header('Content-Type', 'application/json')
     if type(data) in (dict, list):
         return json.dumps(data, indent=4)
     return data
