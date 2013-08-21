@@ -163,7 +163,7 @@ class NetworkManager(object):
             # required to fit floating network
             # in public network, each with /25 range
             if network['access'] == u'public':
-                nw_group.network_size = 127
+                nw_group.network_size = 128
             self.create_networks(nw_group)
 
             used_vlans.append(vlan_start)
