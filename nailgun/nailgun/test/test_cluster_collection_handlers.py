@@ -178,7 +178,7 @@ class TestHandlers(BaseHandlers):
                 'name': u'floating',
                 'access': 'public',
                 'vlan_id': 100,
-                'cidr': '172.16.0.0/24',
+                'cidr': '172.16.0.0/25',
                 'gateway': '172.16.0.1'
             },
             {
