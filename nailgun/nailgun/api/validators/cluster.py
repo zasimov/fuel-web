@@ -93,11 +93,21 @@ class ExtendedAttributesValidator(BasicValidator):
                 log_message=True
             )
 
-        subset = set(data.keys()) <= set(('nodes', 'attributes'))
+        allowed_attrs = (
+            'nodes',
+            'attributes'
+        )
+
+        subset = set(data.keys()) <= set(allowed_attrs)
         if not subset:
             raise errors.InvalidData(
-                "Extended attributes include bad attrs: {0}".format(
-                    ", ".join(bad_attrs)
+                "Extended attributes may only include: {0}".format(
+                    ", ".join(
+                        [
+                            "'{0}'".format(a)
+                            for a in allowed_attrs
+                        ]
+                    )
                 ),
                 log_message=True
             )
