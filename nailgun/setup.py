@@ -41,6 +41,7 @@ requires = [
     'wsgiref==0.1.2',
     'fysom==1.0.11',
     'jsonschema==2.0.0',
+    'Shotgun==0.1.0',
 ]
 
 major_version = '0.1'
@@ -86,6 +87,7 @@ if __name__ == "__main__":
                   'nailgun_fixtures = \
                       nailgun.fixtures.fixman:upload_fixtures',
                   'nailgund = nailgun.wsgi:appstart',
+                  'nailgun_dump = nailgun.task:dump',
               ],
           },
           data_files=recursive_data_files([('share/nailgun', 'static')])

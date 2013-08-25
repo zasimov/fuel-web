@@ -28,7 +28,9 @@ import json
 import web
 import netaddr
 from sqlalchemy.orm import object_mapper, ColumnProperty
-from sqlalchemy import or_
+from sqlalchemy import or_, in_
+from shotgun.config import Config
+from shotgun.manager import Manager
 
 import nailgun.rpc as rpc
 from nailgun.db import db
@@ -806,7 +808,7 @@ class CheckBeforeDeploymentTask(object):
     @classmethod
     def __format_network_error(cls, nodes_count):
         return 'Not enough IP addresses. Public network must have at least '\
-            '{nodes_count} IP addresses '.format(nodes_count=nodes_count) +\
+            '{nodes_count} IP addresses '.format(nodes_count=nodes_count) + \
             'for the current environment.'
 
 
@@ -885,3 +887,37 @@ class RedHatCheckLicensesTask(RedHatTask):
         if nodes:
             msg['args']['nodes'] = nodes
         return msg
+
+
+class DumpTask(object):
+    @classmethod
+    def conf(cls):
+        nodes = db().query(Node).filter(
+            Node.status.in_(['ready', 'provisioned', 'deploying', 'error'])
+        ).all()
+
+        dump_conf = settings.DUMP
+        dump_conf['dump_roles']['slave'] = [n.fqdn for n in nodes]
+        return dump_conf
+
+    @classmethod
+    def execute(cls, task):
+        logger.debug("DumpTask: task=%s" % task.uuid)
+        message = {
+            'method': 'dump_environment',
+            'respond_to': 'dump_environment_resp',
+            'args': {
+                'task_uuid': task.uuid,
+            }
+        }
+        task.cache = message
+        db().add(task)
+        db().commit()
+        rpc.cast('naily', message)
+
+
+def dump():
+    conf = Config(DumpTask.conf())
+    manager = Manager(conf)
+    print manager.snapshot()
+
