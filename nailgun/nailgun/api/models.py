@@ -181,11 +181,6 @@ class Node(Base):
         'deploying',
         'error'
     )
-    NODE_ROLES = (
-        'controller',
-        'compute',
-        'cinder',
-    )
     NODE_ERRORS = (
         'deploy',
         'provision',
@@ -207,7 +202,7 @@ class Node(Base):
     platform_name = Column(String(150))
     progress = Column(Integer, default=0)
     os_platform = Column(String(150))
-    role = Column(Enum(*NODE_ROLES, name='node_role'))
+    role = Column(String(255))
     pending_addition = Column(Boolean, default=False)
     pending_deletion = Column(Boolean, default=False)
     changes = relationship("ClusterChanges", backref="node")
