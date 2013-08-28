@@ -28,7 +28,6 @@ import json
 import web
 import netaddr
 from sqlalchemy.orm import object_mapper, ColumnProperty
-from sqlalchemy import or_
 
 import nailgun.rpc as rpc
 from nailgun.db import db
@@ -47,6 +46,7 @@ from nailgun.api.models import Release
 from nailgun.task.fake import FAKE_THREADS
 from nailgun.errors import errors
 from nailgun.task.helpers import TaskHelper
+from nailgun.serializers.orchestrator import OrchestratorSerializer
 
 
 def fake_cast(queue, messages, **kwargs):
@@ -127,12 +127,11 @@ class DeploymentTask(object):
             netmanager.assign_ips(nodes_ids, "public")
             netmanager.assign_ips(nodes_ids, "storage")
 
-        nodes_with_attrs = []
+        # nodes_with_attrs = []
         # FIXME(mihgen): We need to pass all other nodes, so astute
         #  can know about all the env, not only about added nodes.
         for n in db().query(Node).filter_by(
-            cluster=task.cluster
-        ).order_by(Node.id):
+                cluster=task.cluster).order_by(Node.id):
             # However, we must not pass nodes which are set to be deleted.
             if n.pending_deletion:
                 continue
@@ -143,60 +142,14 @@ class DeploymentTask(object):
                 n.progress = 0
                 db().add(n)
                 db().commit()
-            nodes_with_attrs.append(cls.__format_node_for_naily(n))
-
-        cluster_attrs = task.cluster.attributes.merged_attrs_values()
-        cluster_attrs['master_ip'] = settings.MASTER_IP
-        cluster_attrs['controller_nodes'] = cls.__controller_nodes(cluster_id)
-
-        nets_db = db().query(Network).join(NetworkGroup).\
-            filter(NetworkGroup.cluster_id == cluster_id).all()
-
-        ng_db = db().query(NetworkGroup).filter_by(
-            cluster_id=cluster_id).all()
-        for net in ng_db:
-            net_name = net.name + '_network_range'
-            if net.name == 'floating':
-                cluster_attrs[net_name] = \
-                    cls.__get_ip_ranges_first_last(net)
-            elif net.name == 'public':
-                # We shouldn't pass public_network_range attribute
-                continue
-            else:
-                cluster_attrs[net_name] = net.cidr
-
-        net_params = {}
-        net_params['network_manager'] = task.cluster.net_manager
-
-        fixed_net = db().query(NetworkGroup).filter_by(
-            cluster_id=cluster_id).filter_by(name='fixed').first()
-        # network_size is required for all managers, otherwise
-        #  puppet will use default (255)
-        net_params['network_size'] = fixed_net.network_size
-        if net_params['network_manager'] == 'VlanManager':
-            net_params['num_networks'] = fixed_net.amount
-            net_params['vlan_start'] = fixed_net.vlan_start
-            cls.__add_vlan_interfaces(nodes_with_attrs)
-
-        cluster_attrs['novanetwork_parameters'] = net_params
-
-        if task.cluster.mode == 'ha':
-            logger.info("HA mode chosen, creating VIP addresses for it..")
-            cluster_attrs['management_vip'] = netmanager.assign_vip(
-                cluster_id, "management")
-            cluster_attrs['public_vip'] = netmanager.assign_vip(
-                cluster_id, "public")
-
-        cluster_attrs['deployment_mode'] = task.cluster.mode
-        cluster_attrs['deployment_id'] = cluster_id
+            # nodes_with_attrs.append(cls.__format_node_for_naily(n))
 
         message = {
             'method': 'deploy',
             'respond_to': 'deploy_resp',
             'args': {
                 'task_uuid': task.uuid,
-                'nodes': nodes_with_attrs,
-                'attributes': cluster_attrs
+                'deployment_info': OrchestratorSerializer.serialize(task.cluster),
             }
         }
 
@@ -210,53 +163,6 @@ class DeploymentTask(object):
         db().add(task)
         db().commit()
         rpc.cast('naily', message)
-
-    @classmethod
-    def __format_node_for_naily(cls, n):
-        netmanager = NetworkManager()
-        return {
-            'id': n.id, 'status': n.status, 'error_type': n.error_type,
-            'uid': n.id, 'ip': n.ip, 'mac': n.mac, 'role': n.role,
-            'fqdn': n.fqdn, 'progress': n.progress, 'meta': n.meta,
-            'network_data': netmanager.get_node_networks(n.id),
-            'online': n.online
-        }
-
-    @classmethod
-    def __add_vlan_interfaces(cls, nodes):
-        """
-        We shouldn't pass to orchetrator fixed network
-        when network manager is VlanManager, but we should specify
-        fixed_interface (private_interface in terms of fuel) as result
-        we just pass vlan_interface as node attribute.
-        """
-        netmanager = NetworkManager()
-        for node in nodes:
-            node_db = db().query(Node).get(node['id'])
-
-            fixed_interface = netmanager._get_interface_by_network_name(
-                node_db.id, 'fixed')
-
-            node['vlan_interface'] = fixed_interface.name
-
-    @classmethod
-    def __controller_nodes(cls, cluster_id):
-        nodes = db().query(Node).filter_by(
-            cluster_id=cluster_id,
-            role='controller',
-            pending_deletion=False).order_by(Node.id)
-
-        return map(cls.__format_node_for_naily, nodes)
-
-    @classmethod
-    def __get_ip_ranges_first_last(cls, network_group):
-        """
-        Get all ip ranges in "10.0.0.0-10.0.0.255" format
-        """
-        return [
-            "{0}-{1}".format(ip_range.first, ip_range.last)
-            for ip_range in network_group.ip_ranges
-        ]
 
 
 class ProvisionTask(object):
