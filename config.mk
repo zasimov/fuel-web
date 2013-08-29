@@ -18,9 +18,7 @@ MASTER_DNS?=10.20.0.1
 MASTER_NETMASK?=255.255.255.0
 MASTER_GW?=10.20.0.1
 
-COMMIT_SHA:=$(shell git rev-parse --verify HEAD)
 PRODUCT_VERSION:=3.2
-FUEL_COMMIT_SHA:=$(shell cd fuel && git rev-parse --verify HEAD)
 
 CENTOS_MAJOR:=6
 CENTOS_MINOR:=4
@@ -117,12 +115,11 @@ MIRROR_EGGS?=http://pypi.python.org/simple
 # NOTE(mihgen): removed gemcutter - it redirects to rubygems.org and has issues w/certificate now
 MIRROR_GEMS?=http://rubygems.org
 
+# FYI: For rhel cache we parse fuel/deployment/puppet/rpmcache/files/required-rpms.txt
 REQUIRED_RPMS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/requirements-rpm.txt)
+# FYI: Also we get eggs for ostf from fuel/deployment/puppet/nailgun/files/venv-ostf.txt file
 REQUIRED_EGGS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/requirements-eggs.txt)
-OSTF_EGGS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/fuel/deployment/puppet/nailgun/files/venv-ostf.txt)
 REQUIRED_SRCS:=$(shell grep -v ^\\s*\# $(SOURCE_DIR)/requirements-src.txt)
-REQ_RHEL_RPMS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/fuel/deployment/puppet/rpmcache/files/required-rpms.txt)
-REQ_FUEL_RHEL_RPMS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/fuel/deployment/puppet/rpmcache/files/req-fuel-rhel.txt)
 
 OSTF_PLUGIN_SHA?=f1c7870793a3aa724673c30391d3255a0d9465d5
 OSTF_PLUGIN_VER?=0.2
