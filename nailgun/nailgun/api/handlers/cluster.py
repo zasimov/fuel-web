@@ -45,6 +45,7 @@ from nailgun.api.serializers.network_configuration \
 from nailgun.task.helpers import TaskHelper
 from nailgun.task.manager import DeploymentTaskManager
 from nailgun.task.manager import ClusterDeletionManager
+from nailgun import orchestrator
 
 
 class ClusterHandler(JSONHandler):
@@ -389,3 +390,18 @@ class ClusterAttributesDefaultsHandler(JSONHandler):
                      ' editable attributes for cluster_id %s were reset'
                      ' to default' % cluster_id)
         return {"editable": cluster.attributes.editable}
+
+
+class ClusterDefaultOrchestratorData(JSONHandler):
+    """Cluster default data which will be passed
+    to orchestrator
+    """
+
+    @content_json
+    def GET(self, cluster_id):
+        """:returns: JSONized default data which will be passed to orchestrator
+        :http: * 200 (OK)
+               * 404 (cluster not found in db)
+        """
+        cluster = self.get_object_or_404(Cluster, cluster_id)
+        return orchestrator.serializers.serialize(cluster)

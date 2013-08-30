@@ -46,7 +46,7 @@ from nailgun.api.models import Release
 from nailgun.task.fake import FAKE_THREADS
 from nailgun.errors import errors
 from nailgun.task.helpers import TaskHelper
-from nailgun.serializers.orchestrator import serialize
+from nailgun.orchestrator.serializers import serialize
 
 
 def fake_cast(queue, messages, **kwargs):
@@ -111,21 +111,6 @@ class DeploymentTask(object):
     @classmethod
     def message(cls, task):
         logger.debug("DeploymentTask.message(task=%s)" % task.uuid)
-        task_uuid = task.uuid
-        cluster_id = task.cluster.id
-        netmanager = NetworkManager()
-
-        nodes = TaskHelper.nodes_to_deploy(task.cluster)
-
-        logger.info("Associated FQDNs to nodes: %s" %
-                    ', '.join([n.fqdn for n in nodes]))
-
-        nodes_ids = [n.id for n in nodes]
-        if nodes_ids:
-            logger.info("Assigning IP addresses to nodes..")
-            netmanager.assign_ips(nodes_ids, "management")
-            netmanager.assign_ips(nodes_ids, "public")
-            netmanager.assign_ips(nodes_ids, "storage")
 
         for n in db().query(Node).filter_by(
                 cluster=task.cluster).order_by(Node.id):
