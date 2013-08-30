@@ -83,7 +83,7 @@ class ClusterChanges(Base):
 
 class Cluster(Base):
     __tablename__ = 'clusters'
-    MODES = ('singlenode', 'multinode', 'ha')
+    MODES = ('multinode', 'ha_full', 'ha_compact')
     STATUSES = ('new', 'deployment', 'operational', 'error', 'remove')
     NET_MANAGERS = ('FlatDHCPManager', 'VlanManager')
     id = Column(Integer, primary_key=True)
@@ -119,6 +119,10 @@ class Cluster(Base):
     notifications = relationship("Notification", backref="cluster")
     network_groups = relationship("NetworkGroup", backref="cluster",
                                   cascade="delete")
+
+    @property
+    def is_ha_mode(self):
+        return self.mode in ('ha_full', 'ha_compact')
 
     @property
     def full_name(self):
@@ -181,11 +185,6 @@ class Node(Base):
         'deploying',
         'error'
     )
-    NODE_ROLES = (
-        'controller',
-        'compute',
-        'cinder',
-    )
     NODE_ERRORS = (
         'deploy',
         'provision',
@@ -207,7 +206,7 @@ class Node(Base):
     platform_name = Column(String(150))
     progress = Column(Integer, default=0)
     os_platform = Column(String(150))
-    role = Column(Enum(*NODE_ROLES, name='node_role'))
+    role = Column(String(150))
     pending_addition = Column(Boolean, default=False)
     pending_deletion = Column(Boolean, default=False)
     changes = relationship("ClusterChanges", backref="node")
