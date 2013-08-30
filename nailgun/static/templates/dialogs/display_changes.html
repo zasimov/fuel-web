@@ -5,7 +5,7 @@
 <div class="modal-body display-changes-dialog">
   <!-- Nodes changes -->
   <% var warnings = {
-    'controller': 'Environment will not contain the necessary number of controllers after deployment. Thus, it will not be usable.',
+    'controller': 'Environment does not contain the necessary number of controllers.',
     'compute': 'Compute nodes are recommended for deployment.'
   } %>
   <% var warning = null, canDeploy = true, roles = cluster.availableRoles() %>
@@ -64,7 +64,8 @@
   <% } %>
   <%
     if (cluster.get('nodes').where({role: 'controller'}).length < size) {
-      if (!cluster.get('nodes').length && !cluster.get('changes').length) canDeploy = false; else warning = 'controller';
+      canDeploy = false;
+      warning = 'controller';
     } else {
       _.each(roles, function(role) {
         if (warning != 'controller' && !_.filter(cluster.get('nodes').nodesAfterDeployment(), function(node) {return node.get('role') == role}).length) {
