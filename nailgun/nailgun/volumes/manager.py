@@ -422,7 +422,11 @@ class VolumeManager(object):
         # and volume groups which we should to allocate
         if node.cluster:
             volumes_metadata = node.cluster.release.volumes_metadata
-            role = node.role if node.role else 'other'
+            if node.role in volumes_metadata['volumes_roles_mapping']:
+                role = node.role
+            else:
+                role = 'other'
+
             volume_groups_for_role = volumes_metadata[
                 'volumes_roles_mapping'][role]
 
