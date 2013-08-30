@@ -27,8 +27,7 @@ class mirrors(urwid.WidgetWrap):
     self.parent = parent
     self.listbox_content = []
     self.settings = copy.deepcopy(DEFAULTS)
-    self.screen = self.screenUI()
-
+    self.screen = None
   def apply(self, args):
     if not self.check(args):
         log.error("Check failed. Not applying")
@@ -92,7 +91,7 @@ class mirrors(urwid.WidgetWrap):
   #  focus = obj.get_focus()[0].content
   #  self.parent.footer.set_text(focus.get_label())
 
-  def screenUI(self):
+  def createScreenUI(self):
     #Define your text labels, text fields, and buttons first
     text1 = TextLabel(u"Choose repo mirrors to use.\n"
      u"Note: Refer to Fuel documentation on how to set up a custom mirror.")
@@ -118,6 +117,10 @@ class mirrors(urwid.WidgetWrap):
     #Add everything into a ListBox and return it
     walker = urwid.SimpleListWalker(self.listbox_content)
     #urwid.connect_signal(walker, 'modified', self.displayTooltip)
-    self.myscreen = urwid.ListBox(walker)
-    return self.myscreen
+    screen = urwid.ListBox(walker)
+    return screen
     
+  def screenUI(self):
+    if not self.screen:
+      self.screen = self.createScreenUI()
+    return self.screen

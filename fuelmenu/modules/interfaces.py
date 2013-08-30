@@ -59,7 +59,7 @@ class interfaces(urwid.WidgetWrap):
     self.activeiface = sorted(self.netsettings.keys())[0]
     self.extdhcp=True
     self.parent = parent
-    #self.screen = self.screenUI()
+    self.screen = None
      
   def check(self, args):
     """Validates that all fields have valid values and some sanity checks"""
@@ -322,7 +322,8 @@ IP address")
   def setExtIfaceFields(self, enabled=True):
     ###TODO: Define ext iface fields as disabled and then toggle
     pass
-  def screenUI(self):
+
+  def createScreenUI(self):
     #Define your text labels, text fields, and buttons first
     text1 = TextLabel("Network settings")
 
@@ -391,3 +392,7 @@ IP address")
     self.setNetworkDetails()
     return screen
     
+  def screenUI(self):
+    if not self.screen:
+      self.screen = self.createScreenUI()
+    return self.screen

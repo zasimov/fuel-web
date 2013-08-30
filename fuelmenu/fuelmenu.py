@@ -91,6 +91,7 @@ class FuelSetup():
         else:
             log.info(name, self.choices.index(name))
             child = self.children[int(self.choices.index(name))]
+        # @Matt What about to instantiate a screenUI once and use every time?
         self.childpage = child.screenUI()
         self.childfill = urwid.Filler(self.childpage, 'top', 40)
         self.childbox = urwid.BoxAdapter(self.childfill, 40)

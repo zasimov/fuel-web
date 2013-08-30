@@ -69,7 +69,7 @@ class cobblerconf(urwid.WidgetWrap):
     self.extdhcp=True
     self.parent = parent
     self.oldsettings= self.load()
-    self.screen = self.screenUI()
+    self.screen = None
      
   def check(self, args):
     """Validates that all fields have valid values and some sanity checks"""
@@ -380,7 +380,7 @@ class cobblerconf(urwid.WidgetWrap):
   def setExtIfaceFields(self, enabled=True):
     ###TODO: Define ext iface fields as disabled and then toggle
     pass
-  def screenUI(self):
+  def createScreenUI(self):
     #Define your text labels, text fields, and buttons first
     text1 = urwid.Text("Enter configuration necessary for Cobbler setup.")
 
@@ -439,3 +439,7 @@ class cobblerconf(urwid.WidgetWrap):
     screen = urwid.ListBox(self.listwalker)
     return screen
     
+  def screenUI(self):
+    if not self.screen:
+      self.screen = self.createScreenUI()
+    return self.screen

@@ -14,13 +14,13 @@ class welcome():
     self.name="Welcome"
     self.priority=1
     self.visible=True
-    self.screen = self.screenUI()
+    self.screen = None
 
   def check(self):
     #TODO: Ensure all params are filled out and sensible
     return True
 
-  def screenUI(self):
+  def createScreenUI(self):
     #Define your text labels, text fields, and buttons first
     text1 = urwid.Text("Welcome to Fuel! Use the menu on the left")
     fuellogo_huge=[
@@ -100,3 +100,7 @@ class welcome():
     screen = urwid.ListBox(urwid.SimpleListWalker(listbox_content))
     return screen
     
+  def screenUI(self):
+    if not self.screen:
+      self.screen = self.createScreenUI()
+    return self.screen

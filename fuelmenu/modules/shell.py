@@ -15,7 +15,7 @@ class shell():
     self.priority=99
     self.visible=True
     self.parent=parent
-    self.screen = self.screenUI()
+    self.screen = None
   def check(self):
     #TODO: Ensure all params are filled out and sensible
     return True
@@ -26,7 +26,7 @@ class shell():
     subprocess.call("clear ; echo '%s';echo; bash" % message, shell=True)
     self.parent.mainloop.screen.start()
 
-  def screenUI(self):
+  def createScreenUI(self):
     #Define your text labels, text fields, and buttons first
     text1 = urwid.Text("Press the button below to enter a shell login.")
     login_button = Button("Shell Login",self.start_shell)
@@ -37,3 +37,7 @@ class shell():
     screen = urwid.ListBox(urwid.SimpleListWalker(listbox_content))
     return screen
     
+  def screenUI(self):
+    if not self.screen:
+      self.screen = self.createScreenUI()
+    return self.screen
