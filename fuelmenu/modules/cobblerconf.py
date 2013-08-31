@@ -28,12 +28,18 @@ DEFAULTS = {
                    "tooltip": "This is the INTERNAL network for provisioning",
                    "value"  : "eth0"},
 
-  "ADMIN_NETWORK/first"     : { "label"  : "DHCP Pool Start",
-                   "tooltip": "Used for defining IPs for hosts and instance public addresses",
-                   "value"  : "10.0.0.201"},
-  "ADMIN_NETWORK/last"   : { "label"  : "DHCP Pool End",
-                   "tooltip": "Used for defining IPs for hosts and instance public addresses",
-                   "value"  : "10.0.0.254"},
+  "ADMIN_NETWORK/first_bootstrap"     : { "label"  : "DHCP Bootstrap nodes Pool Start",
+                   "tooltip": "Used for defining IPs for hosts during a bootstrap stage",
+                   "value"  : "10.20.0.3"},
+  "ADMIN_NETWORK/last_bootstrap"   : { "label"  : "DHCP Bootstrap nodes Pool End",
+                   "tooltip": "Used for defining IPs for hosts during a bootstrap stage",
+                   "value"  : "10.20.0.127"},
+  "ADMIN_NETWORK/first_static"     : { "label"  : "DHCP Static Pool Start",
+                   "tooltip": "Used for defining IPs for deployed nodes",
+                   "value"  : "10.20.0.128"},
+  "ADMIN_NETWORK/last_static"   : { "label"  : "DHCP Static Pool End",
+                   "tooltip": "Used for defining IPs for deployed nodes",
+                   "value"  : "10.20.0.254"},
 #  "ext_if"     : { "label"  : "External Interface",
 #                   "tooltip": "This is the EXTERNAL network for Internet access",
 #                   "value"  : "eth1"},
@@ -126,8 +132,8 @@ class cobblerconf(urwid.WidgetWrap):
   
          #Ensure DHCP Pool Start and DHCP Pool are valid IPs
          try:
-           if netaddr.valid_ipv4(responses["ADMIN_NETWORK/first"]):
-             dhcp_start=netaddr.IPAddress(responses["ADMIN_NETWORK/first"])
+           if netaddr.valid_ipv4(responses["ADMIN_NETWORK/first_bootstrap"]):
+             dhcp_start=netaddr.IPAddress(responses["ADMIN_NETWORK/first_bootstrap"])
            else:
              raise Exception("")
          except Exception, e:
@@ -135,8 +141,8 @@ class cobblerconf(urwid.WidgetWrap):
                          % e)
                          #% responses["ADMIN_NETWORK/first"])
          try:
-           if netaddr.valid_ipv4(responses["ADMIN_NETWORK/last"]):
-             dhcp_end=netaddr.IPAddress(responses["ADMIN_NETWORK/last"])
+           if netaddr.valid_ipv4(responses["ADMIN_NETWORK/last_bootstrap"]):
+             dhcp_end=netaddr.IPAddress(responses["ADMIN_NETWORK/last_bootstrap"])
            else:
              raise Exception("")
          except:
@@ -145,16 +151,16 @@ class cobblerconf(urwid.WidgetWrap):
   
          #Ensure pool start and end are in the same subnet of each other
          netmask=self.netsettings[responses["ADMIN_NETWORK/interface"]]["netmask"]
-         if network.inSameSubnet(responses["ADMIN_NETWORK/first"],responses["ADMIN_NETWORK/last"],
+         if network.inSameSubnet(responses["ADMIN_NETWORK/first_bootstrap"],responses["ADMIN_NETWORK/last_bootstrap"],
                                  netmask) is False:
            errors.append("DHCP Pool start and end are not in the same subnet.")
   
          #Ensure pool start and end are in the netmask of ADMIN_NETWORK/interface
          mgmt_if_ipaddr=self.netsettings[responses["ADMIN_NETWORK/interface"]]["addr"]
-         if network.inSameSubnet(responses["ADMIN_NETWORK/first"],mgmt_if_ipaddr,
+         if network.inSameSubnet(responses["ADMIN_NETWORK/first_bootstrap"],mgmt_if_ipaddr,
                                  netmask) is False:
            errors.append("DHCP Pool start is not in the same subnet as management interface.")
-         if network.inSameSubnet(responses["ADMIN_NETWORK/last"],mgmt_if_ipaddr,
+         if network.inSameSubnet(responses["ADMIN_NETWORK/last_bootstrap"],mgmt_if_ipaddr,
                                  netmask) is False:
            errors.append("DHCP Pool end is not in the same subnet as management interface.")
 
@@ -191,6 +197,12 @@ class cobblerconf(urwid.WidgetWrap):
     else:
       self.parent.footer.set_text("No errors found.")
       return responses
+
+  def createNailyFacts(self):
+    # The way to store variables into a /etc/naily.facts should be implemented
+    # here.
+    pass
+
 
   def apply(self, args):
     responses = self.check(args)
