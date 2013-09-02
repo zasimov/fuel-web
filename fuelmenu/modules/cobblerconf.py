@@ -21,25 +21,26 @@ blank = urwid.Divider()
 #fields = ["hostname", "domain", "mgmt_if","dhcp_start","dhcp_end",
 #          "blank","ext_if","ext_dns"]
 fields = ["HOSTNAME", "DNS_DOMAIN", "DNS_SEARCH","DNS_UPSTREAM",
-          "ADMIN_NETWORK/interface", "ADMIN_NETWORK/first",
-          "ADMIN_NETWORK/last"]
+          "ADMIN_NETWORK/interface", "ADMIN_NETWORK/first_bootstrap",
+          "ADMIN_NETWORK/last_bootsrtap", "ADMIN_NETWORK/first_static",
+          "ADMIN_NETWORK/last_static"]
 DEFAULTS = {
   "ADMIN_NETWORK/interface" : { "label"  : "Management Interface",
                    "tooltip": "This is the INTERNAL network for provisioning",
-                   "value"  : "eth0"},
+                   "value"  : "eth0", 'fact': 'mnbs_internal_interface'},
 
   "ADMIN_NETWORK/first_bootstrap"     : { "label"  : "DHCP Bootstrap nodes Pool Start",
                    "tooltip": "Used for defining IPs for hosts during a bootstrap stage",
-                   "value"  : "10.20.0.3"},
+                   "value"  : "10.20.0.3", 'fact': 'mnbs_dhcp_pool_start'},
   "ADMIN_NETWORK/last_bootstrap"   : { "label"  : "DHCP Bootstrap nodes Pool End",
                    "tooltip": "Used for defining IPs for hosts during a bootstrap stage",
-                   "value"  : "10.20.0.127"},
+                   "value"  : "10.20.0.127", 'fact': 'mnbs_dhcp_pool_end'},
   "ADMIN_NETWORK/first_static"     : { "label"  : "DHCP Static Pool Start",
                    "tooltip": "Used for defining IPs for deployed nodes",
-                   "value"  : "10.20.0.128"},
+                   "value"  : "10.20.0.128", 'fact': 'mnbs_static_pool_start'},
   "ADMIN_NETWORK/last_static"   : { "label"  : "DHCP Static Pool End",
                    "tooltip": "Used for defining IPs for deployed nodes",
-                   "value"  : "10.20.0.254"},
+                   "value"  : "10.20.0.254", 'fact': 'mnbs_static_pool_end'},
 #  "ext_if"     : { "label"  : "External Interface",
 #                   "tooltip": "This is the EXTERNAL network for Internet access",
 #                   "value"  : "eth1"},
@@ -198,25 +199,40 @@ class cobblerconf(urwid.WidgetWrap):
       self.parent.footer.set_text("No errors found.")
       return responses
 
-  def createNailyFacts(self):
-    # The way to store variables into a /etc/naily.facts should be implemented
-    # here.
-    pass
+  def _readNailyFacts(self, filename):
+    """ Read all facts from the filename in a Naily.facts format. No errors 
+        handle there, just exception raises. """
+    data = {}
+    regexp = r'(?P<key>[^=\s]+)=(?P<value>.*)'
+    with open(filename) as fd:
+      re_obj = re.match(regexp, fd.readline().chomp())
+      if re_obj:
+        data[re.obj.group('key')] = re.obj.group('value')
+    return data
 
+  def _dumpNailyFacts(self, filename, data):
+    """ Dump all data to the filename in a Naily.facts format. Data should
+        be a dict. No errors handle there, just exception raises. """
+    with open(filename, 'w') as fd:
+      for key in data:
+        fd.write('{}={}\n'.format(key, data[key]))
+
+  def storeNailyFacts(self, newdata):
+    """ Method to store data into /etc/naily.facts. """
+    filename = '/etc/naily.facts'
+    data = self._readNailyFacts(filename)
+    for key in newdata:
+      data[key] = newdata[key]
+    self._dumpNailyFacts(filename, data)
 
   def apply(self, args):
     responses = self.check(args)
     if responses is False:
-        log.error("Check failed. Not applying")
-        log.error("%s" % (responses))
-        return False
+      log.error("Check failed. Not applying")
+      log.error("%s" % (responses))
+      return False
 
-    #Need to decide if we are pre-deployment or post-deployment
-    #Always save even if "post"
-    self.save(responses)
-    if self.deployment == "post":
-      self.updateCobbler(responses)
-      services.restart("cobbler")
+
   
   def updateCobbler(self, params):  
     patterns={
