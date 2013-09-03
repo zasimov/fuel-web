@@ -35,6 +35,7 @@ import nailgun.rpc as rpc
 from nailgun.settings import settings
 from nailgun.task.fake import FAKE_THREADS
 from nailgun.task.helpers import TaskHelper
+from nailgun.utils import cached_value
 
 
 def fake_cast(queue, messages, **kwargs):
@@ -552,12 +553,13 @@ class ClusterDeletionTask(object):
         DeletionTask.execute(task, 'remove_cluster_resp')
 
 
-class NetworkVerificationTask(object):
+class VerifyNetworksTask(object):
 
-    task_name = None
+    def __init__(self, task_name):
+        self.task_name = task_name
 
-    @classmethod
-    def _prepare_message(cls, task, data):
+    @cached_value.memoize(ttl=20)
+    def _message(self, task, data):
         nodes = []
         for n in task.cluster.nodes:
             node_json = {'uid': n.id, 'networks': []}
@@ -579,34 +581,20 @@ class NetworkVerificationTask(object):
                     {'iface': nic.name, 'vlans': vlans}
                 )
             nodes.append(node_json)
-        return message = {
-            'method': cls.task_name,
-            'respond_to': '{0}_resp'.format(cls.task_name),
+        return {
+            'method': self.task_name,
+            'respond_to': '{0}_resp'.format(self.task_name),
             'args': {'task_uuid': task.uuid,
-                     'nodes': cls._prepare_nodes_info(task, data)}}
+                     'nodes': nodes}}
 
-    @classmethod
-    def execute(cls, task, data):
-        message = cls._prepare_message(task, data)
-        logger.debug("{0} method is called with: %s", cls.task_name, message)
+    def execute(self, task, data):
+        logger.debug("%s method is called with: %s",
+                    self.task_name, self._message(task, data))
 
-        task.cache = message
+        task.cache = self._message(task, data)
         db().add(task)
         db().commit()
-        rpc.cast('naily', message)
-
-
-
-class VerifyNetworksTask(NetworkVerificationTask):
-
-    task_name = 'verify_networks'
-
-
-
-class DhcpCheckTask(NetworkVerificationTask):
-
-    task_name = 'dhcp_check'
-
+        rpc.cast('naily', self._message(task, data))
 
 
 class CheckNetworksTask(object):
