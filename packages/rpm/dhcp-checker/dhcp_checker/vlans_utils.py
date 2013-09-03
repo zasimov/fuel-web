@@ -13,15 +13,18 @@
 #    under the License.
 from dhcp_checker import utils
 import re
+import traceback
 
 
 class VlansContext(object):
 
-    def __init__(self, iface, vlans, delete=False):
+    def __init__(self, config, delete=False):
         """
         @ifaces - list or tuple of (iface, vlan) pairs
         """
-        self.vlans = [Vlan(iface, vlan) for vlan in vlans]
+
+        self.vlans = [Vlan(item[0], vlan) for item in config.iteritems()\
+                     for vlan in item[1]]
         self.delete = delete
 
     def start(self):
@@ -36,7 +39,7 @@ class VlansContext(object):
         self.start()
         return self.vlans
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, type, value, trace):
         self.end()
 
 

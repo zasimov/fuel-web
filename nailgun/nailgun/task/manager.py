@@ -330,22 +330,11 @@ class VerifyNetworksTaskManager(TaskManager):
             nets
         )
         db().refresh(task)
-        # if task.status != 'error':
-        #     # this one is connected with UI issues - we need to
-        #     # separate if error happened inside nailgun or somewhere
-        #     # in the orchestrator, and UI does it by task name.
-        #     task.name = "verify_networks"
-        #     db().add(task)
-        #     db().commit()
-        #     self._call_silently(
-        #         task,
-        #         tasks.VerifyNetworksTask('verify_networks'),
-        #         vlan_ids
-        #     )
-
         if task.status != 'error':
-            # if there is better way to do it, point me
-            task.name = 'check_dhcp'
+            # this one is connected with UI issues - we need to
+            # separate if error happened inside nailgun or somewhere
+            # in the orchestrator, and UI does it by task name.
+            task.name = "verify_networks"
             db().add(task)
             db().commit()
             self._call_silently(
@@ -353,6 +342,17 @@ class VerifyNetworksTaskManager(TaskManager):
                 tasks.VerifyNetworksTask('check_dhcp'),
                 vlan_ids
             )
+
+        # if task.status != 'error':
+        #     # if there is better way to do it, point me
+        #     task.name = 'check_dhcp'
+        #     db().add(task)
+        #     db().commit()
+        #     self._call_silently(
+        #         task,
+        #         tasks.VerifyNetworksTask('check_dhcp'),
+        #         vlan_ids
+        #     )
 
         return task
 

@@ -65,13 +65,14 @@ def check_dhcp(ifaces, timeout=5, repeat=2):
         ((iface, timeout) for iface in ifaces_filtered*repeat)))
 
 
-def check_dhcp_with_vlans(iface, vlans, timeout=5, repeat=2):
+def check_dhcp_with_vlans(config, timeout=5, repeat=2):
     """
+    config - {'eth0': (100, 101), 'eth1': (100, 102)}
     @ifaces - string : eth0, eth1
     @vlans - iterable (100, 101, 102)
     """
-    with vlans_utils.VlansContext(iface, vlans, delete=False) as vlan_list:
-        return check_dhcp([v.ident for v in vlan_list] + [iface],
+    with vlans_utils.VlansContext(config, delete=False) as vlan_list:
+        return check_dhcp([v.ident for v in vlan_list] + [str(i) for i in config.keys()],
             timeout=timeout, repeat=repeat)
 
 

@@ -103,8 +103,8 @@ module Naily
     end
 
     def check_dhcp(data)
-      reporter = Naily::Reporter.new(@producer, data['respond_to'], data['args'], data['args']['task_uuid'])
-      result = @orchestrator.dhcp_check(reporter, data['args']['task_uuid'], data['args']['nodes'])
+      reporter = Naily::Reporter.new(@producer, data['respond_to'], data['args']['task_uuid'])
+      result = @orchestrator.check_dhcp(reporter, data['args']['task_uuid'], data['args']['nodes'])
       report_result(result, reporter)
     end
 

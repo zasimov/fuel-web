@@ -16,6 +16,7 @@ from cliff import lister
 from cliff import command
 from dhcp_checker import api
 from itertools import chain
+import json
 
 
 class BaseCommand(command.Command):
@@ -84,15 +85,12 @@ class DhcpWithVlansCheck(lister.Lister, BaseCommand):
 
     def get_parser(self, prog_name):
         parser = super(DhcpWithVlansCheck, self).get_parser(prog_name)
-        parser.add_argument('iface',
+        parser.add_argument('config',
                              help='Ethernet interface name')
-        parser.add_argument('vlans', metavar='V', nargs='+',
-                             help='Vlans for ethernet interface')
         return parser
 
     def take_action(self, parsed_args):
-        res = api.check_dhcp_with_vlans(parsed_args.iface,
-                            parsed_args.vlans,
+        res = api.check_dhcp_with_vlans(json.loads(parsed_args.config),
                             timeout=parsed_args.timeout,
                             repeat=parsed_args.repeat)
         first = res.next()
