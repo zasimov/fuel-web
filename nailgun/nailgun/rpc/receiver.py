@@ -567,9 +567,9 @@ class NailgunReceiver(object):
                                       progress, error_msg, result)
 
     @classmethod
-    def dhcp_check_resp(cls, **kwargs):
+    def check_dhcp_resp(cls, **kwargs):
         logger.info(
-            "RPC method dhcp_check_resp received: %s" %
+            "RPC method check_dhcp_resp received: %s" %
             json.dumps(kwargs)
         )
         pass
