@@ -24,10 +24,9 @@ define(
     'text!templates/common/notifications_popover.html',
     'text!templates/common/breadcrumb.html',
     'text!templates/common/footer.html',
-    'text!templates/common/rhel_credentials.html',
-    'text!i18n/translation.json'
+    'text!templates/common/rhel_credentials.html'
 ],
-function(utils, models, dialogViews, navbarTemplate, nodesStatsTemplate, notificationsTemplate, notificationsPopoverTemplate, breadcrumbsTemplate, footerTemplate, rhelCredentialsTemplate, translation) {
+function(utils, models, dialogViews, navbarTemplate, nodesStatsTemplate, notificationsTemplate, notificationsPopoverTemplate, breadcrumbsTemplate, footerTemplate, rhelCredentialsTemplate) {
     'use strict';
 
     var views = {};
@@ -225,14 +224,18 @@ function(utils, models, dialogViews, navbarTemplate, nodesStatsTemplate, notific
     views.Footer = Backbone.View.extend({
         template: _.template(footerTemplate),
         events: {
-            'click .lang-selector': 'setLocale'
+            'click .localeSelector': 'setLocale'
         },
-        setLocale: function(e){
-            var locales = {
-                'EN': 'en-US',
-                'CN': 'zh-CN'
-            }
-            $.i18n.setLng(locales[e.currentTarget.innerText]);
+        locales: [
+                {'name': 'EN', 'locale': 'en-US'},
+                {'name': 'CN', 'locale': 'zh-CN'}
+        ],
+        findLocale: function(comparator) {
+            return _.find(this.locales, comparator);
+        },
+        setLocale: function(e) {
+            var newLocale = this.findLocale(function(l) { return l.name == e.currentTarget.innerText; })
+            $.i18n.setLng(newLocale.locale);
             window.location.reload();
         },
         initialize: function(options) {
@@ -241,8 +244,23 @@ function(utils, models, dialogViews, navbarTemplate, nodesStatsTemplate, notific
                 this.render();
             }, this));
         },
+        renderLocales: function(e) {
+            var lang = this.findLocale(function(l) { return l.locale == $.i18n.lng(); })
+            this.$('.current-locale').text(lang.name);
+
+            var input = this.$('.locales');
+            input.html('');
+            _.each(this.locales, function(locale) {
+                var li = $('<li/>').attr('role', 'presentation');
+                var link = $('<a/>').addClass('localeSelector').attr('role', 'menuitem').text(locale.name);
+                li.append(link);
+                input.append(li);
+
+            });
+        },
         render: function() {
             this.$el.html(this.template({version: this.version}));
+            this.renderLocales();
             return this;
         }
     });
