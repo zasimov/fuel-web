@@ -334,15 +334,34 @@ class VerifyNetworksTaskManager(TaskManager):
             # this one is connected with UI issues - we need to
             # separate if error happened inside nailgun or somewhere
             # in the orchestrator, and UI does it by task name.
-            task.name = "verify_networks"
-            db().add(task)
+            task.name = 'verify_networks'
+
+            verify_task = Task(name='verify_networks',
+                cluster=self.cluster,
+                parent_id=task.id)
+            db().add(verify_task)
             db().commit()
+
             self._call_silently(
-                task,
-                tasks.VerifyNetworksTask('check_dhcp'),
+                verify_task,
+                tasks.VerifyNetworksTask('verify_networks'),
                 vlan_ids
             )
 
+            dhcp_subtask = Task(
+                name='check_dhcp',
+                cluster=self.cluster,
+                parent_id=task.id)
+            db().add(dhcp_subtask)
+
+            db().commit()
+
+
+            self._call_silently(
+                dhcp_subtask,
+                tasks.VerifyNetworksTask('check_dhcp'),
+                vlan_ids
+            )
         return task
 
 

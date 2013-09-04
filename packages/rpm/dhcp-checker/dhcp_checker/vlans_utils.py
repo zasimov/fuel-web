@@ -23,7 +23,7 @@ class VlansContext(object):
         @ifaces - list or tuple of (iface, vlan) pairs
         """
 
-        self.vlans = [Vlan(item[0], vlan) for item in config.iteritems()\
+        self.vlans = [Vlan(item[0], str(vlan)) for item in config.iteritems()\
                      for vlan in item[1]]
         self.delete = delete
 

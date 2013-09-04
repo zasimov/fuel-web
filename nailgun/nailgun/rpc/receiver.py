@@ -17,6 +17,7 @@
 import itertools
 import json
 import traceback
+import netifaces
 
 from sqlalchemy import or_
 
@@ -580,15 +581,25 @@ class NailgunReceiver(object):
         status = kwargs.get('status')
         progress = kwargs.get('progress')
 
-        # We simply check that each node received all vlans for cluster
-        task = db().query(Task).filter_by(uuid=task_uuid).first()
-        msg = []
-        template = "Dhcp server on {server_id} - {mac} from node {yiaddr} on {iface}."
-        for node, dhcp_response in nodes.iteritems():
-            for row in dhcp_response:
-                msg.append(template.format(**row))
-        TaskHelper.update_task_status(task_uuid, "error",
-                                      progress, '\n'.join(msg), {})
+        master_networks = itertools.chain(*get_master_networks(
+                                          netifaces.interfaces()))
+
+        macs = [item['addr'] for item in master_networks]
+        logger.debug('Mac addr on master node %s', macs)
+        validator = lambda row: row['mac'] not in macs
+
+        messages = []
+        message_template = ("Dhcp server on {server_id}"
+                            "- {mac} from node {yiaddr} on {iface}.")
+        if nodes:
+            for node, dhcp_response in nodes.iteritems():
+                for row in dhcp_response:
+                    if True:
+                        messages.append(message_template.format(**row))
+            status = status if not messages else "error"
+            error_msg = '\n'.join(messages) if messages else error_msg
+        TaskHelper.update_task_status(task_uuid, status,
+                                      progress, error_msg, nodes)
 
 
 
@@ -774,3 +785,10 @@ class NailgunReceiver(object):
         # TODO(NAME): remove this ugly checks
         if error_message != 'Task aborted':
             notifier.notify('error', error_message)
+
+
+def get_master_networks(ifaces):
+    for iface in ifaces:
+        iface_data = netifaces.ifaddresses(iface)
+        if netifaces.AF_LINK in iface_data:
+            yield netifaces.ifaddresses(iface)[netifaces.AF_LINK]
