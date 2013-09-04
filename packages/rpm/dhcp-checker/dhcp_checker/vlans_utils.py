@@ -13,7 +13,6 @@
 #    under the License.
 from dhcp_checker import utils
 import re
-<<<<<<< HEAD
 import traceback
 import imp
 # net_probe rpm should be refactored tobe importable
