@@ -471,7 +471,7 @@ class BaseNodeTestCase(BaseTestCase):
             if task['name'] == 'redhat_setup' \
                     and task['result']['release_info']['release_id'] \
                             == release_id:
-                return self._task_wait(task, 60 * 60)
+                return self._task_wait(task, 60 * 120)
 
     def assert_release_state(self, release_name, state='available'):
         for release in self.client.get_releases():
