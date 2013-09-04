@@ -71,9 +71,8 @@ def check_dhcp_with_vlans(config, timeout=5, repeat=2):
     @ifaces - string : eth0, eth1
     @vlans - iterable (100, 101, 102)
     """
-    with vlans_utils.VlansContext(config, delete=False) as vlan_list:
-        return check_dhcp([v.ident for v in vlan_list] + [str(i) for i in config.keys()],
-            timeout=timeout, repeat=repeat)
+    with vlans_utils.VlansActor(config) as vifaces:
+        return check_dhcp(list(vifaces), timeout=timeout, repeat=repeat)
 
 
 @utils.single_format
