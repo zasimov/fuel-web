@@ -35,6 +35,7 @@ import nailgun.rpc as rpc
 from nailgun.settings import settings
 from nailgun.task.fake import FAKE_THREADS
 from nailgun.task.helpers import TaskHelper
+from nailgun.utils import cached_value
 
 
 def fake_cast(queue, messages, **kwargs):
@@ -554,8 +555,11 @@ class ClusterDeletionTask(object):
 
 class VerifyNetworksTask(object):
 
-    @classmethod
-    def execute(self, task, data):
+    def __init__(self, task_name):
+        self.task_name = task_name
+
+    @cached_value.memoize(ttl=20)
+    def _message(self, task, data):
         nodes = []
         for n in task.cluster.nodes:
             node_json = {'uid': n.id, 'networks': []}
@@ -577,17 +581,20 @@ class VerifyNetworksTask(object):
                     {'iface': nic.name, 'vlans': vlans}
                 )
             nodes.append(node_json)
+        return {
+            'method': self.task_name,
+            'respond_to': '{0}_resp'.format(self.task_name),
+            'args': {'task_uuid': task.uuid,
+                     'nodes': nodes}}
 
-        message = {'method': 'verify_networks',
-                   'respond_to': 'verify_networks_resp',
-                   'args': {'task_uuid': task.uuid,
-                            'nodes': nodes}}
-        logger.debug("Network verification is called with: %s", message)
+    def execute(self, task, data):
+        logger.debug("%s method is called with: %s",
+                    self.task_name, self._message(task, data))
 
-        task.cache = message
+        task.cache = self._message(task, data)
         db().add(task)
         db().commit()
-        rpc.cast('naily', message)
+        rpc.cast('naily', self._message(task, data))
 
 
 class CheckNetworksTask(object):

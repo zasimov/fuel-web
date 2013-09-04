@@ -13,75 +13,41 @@
 #    under the License.
 from dhcp_checker import utils
 import re
+import traceback
+import imp
+# net_probe rpm should be refactored tobe importable
+net_probe = imp.load_source('net_probe', '/usr/bin/net_probe.py')
 
+class VlansActor(net_probe.Actor):
 
-class VlansContext(object):
-
-    def __init__(self, iface, vlans, delete=False):
+    def __init__(self, config):
         """
         @ifaces - list or tuple of (iface, vlan) pairs
         """
-        self.vlans = [Vlan(iface, vlan) for vlan in vlans]
-        self.delete = delete
+        interfaces = {}
+        for iface, vlans in config.iteritems():
+            interfaces[iface] = ', '.join(str(v) for v in vlans)
+        self.logger = self._define_logger()
+        super(VlansActor, self).__init__({'interfaces': interfaces})
 
-    def start(self):
-        for vlan in self.vlans:
-            vlan.up()
 
-    def end(self):
-        for vlan in self.vlans:
-            vlan.down(delete=self.delete)
+    def _vlans_str_generator(self):
+        for iface, vlan in self._iface_vlan_iterator():
+            yield '{0}.{1}'.format(iface, vlan)
+        for iface in self._iface_iterator():
+            yield str(iface)
 
     def __enter__(self):
-        self.start()
-        return self.vlans
+        for iface, vlan in self._iface_vlan_iterator():
+            self._ensure_iface_up(iface)
 
-    def __exit__(self, type, value, traceback):
-        self.end()
+            if vlan > 0:
+                self._ensure_viface_create_and_up(iface, vlan)
+                viface = self._viface_by_iface_vid(iface, vlan)
+            else:
+                viface = iface
+        return self._vlans_str_generator()
 
-
-class Vlan(object):
-
-    def __init__(self, iface, number, vlan_config=None):
-        """
-        """
-        self.iface = iface
-        self.number = number
-        self.config = vlan_config if vlan_config else {}
-
-    @property
-    def ident(self):
-        return '{0}.{1}'.format(self.iface, self.number)
-
-    @property
-    def state(self):
-        state = utils.command_util('ip', 'link', 'show', self.ident)
-        response = re.search(r'state (?P<state>[A-Z]*)', state.stdout.read())
-        if response:
-            return response.groupdict()['state']
-        else:
-            return None
-
-    def create(self):
-        return utils.command_util("ip", "link", "add", "link", self.iface,
-            "name", self.ident, "type", "vlan", "id", self.number)
-
-    def link_up(self):
-        return utils.command_util('ip', 'link', 'set',
-                                  'dev', self.ident, 'up')
-
-    def delete(self):
-        return utils.command_util("ip", "link", "del", "dev", self.ident)
-
-    def link_down(self):
-        return utils.command_util('ip', 'link', 'set',
-                                  'dev', self.ident, 'down')
-
-    def up(self):
-        self.create()
-        self.link_up()
-
-    def down(self, delete=False):
-        if delete:
-            self.link_down()
-            self.delete()
+    def __exit__(self, type, value, trace):
+        for iface in self._iface_iterator():
+            self._ensure_iface_down(iface)

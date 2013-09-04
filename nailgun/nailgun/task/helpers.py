@@ -153,7 +153,7 @@ class TaskHelper(object):
             if all(map(lambda s: s.status == 'ready', subtasks)):
                 task.status = 'ready'
                 task.progress = 100
-                task.message = '; '.join(map(
+                task.message = '\n'.join(map(
                     lambda s: s.message, filter(
                         lambda s: s.message is not None, subtasks)))
                 db().add(task)
@@ -162,7 +162,7 @@ class TaskHelper(object):
             elif all(map(lambda s: s.status in ('ready', 'error'), subtasks)):
                 task.status = 'error'
                 task.progress = 100
-                task.message = '; '.join(list(set(map(
+                task.message = '\n'.join(list(set(map(
                     lambda s: (s.message or ""), filter(
                         lambda s: (
                             s.status == 'error' and not
