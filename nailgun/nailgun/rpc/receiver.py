@@ -568,11 +568,29 @@ class NailgunReceiver(object):
 
     @classmethod
     def check_dhcp_resp(cls, **kwargs):
+        """
+        """
         logger.info(
             "RPC method check_dhcp_resp received: %s" %
             json.dumps(kwargs)
         )
-        pass
+        task_uuid = kwargs.get('task_uuid')
+        nodes = kwargs.get('nodes')
+        error_msg = kwargs.get('error')
+        status = kwargs.get('status')
+        progress = kwargs.get('progress')
+
+        # We simply check that each node received all vlans for cluster
+        task = db().query(Task).filter_by(uuid=task_uuid).first()
+        msg = []
+        template = "Dhcp server on {server_id} - {mac} from node {yiaddr} on {iface}."
+        for node, dhcp_response in nodes.iteritems():
+            for row in dhcp_response:
+                msg.append(template.format(**row))
+        TaskHelper.update_task_status(task_uuid, "error",
+                                      progress, '\n'.join(msg), {})
+
+
 
     # Red Hat related callbacks
 
