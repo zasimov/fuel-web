@@ -1,0 +1,8 @@
+#!/usr/bin/make -f
+
+include /usr/share/cdbs/1/rules/debhelper.mk
+
+export DH_VERBOSE:=1
+
+install/partman-fuel::
+	install -o root -g root -m 0755 -D autopartition-fuel debian/$(cdbs_curpkg)/usr/bin/autopartition-fuel

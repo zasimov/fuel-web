@@ -1,0 +1,21 @@
+#!/bin/sh
+
+notice () {
+    logger -t partman-fuel "$@"
+}
+
+error () {
+    logger -t partman-fuel "error: $@"
+}
+
+# load debconf
+. /usr/share/debconf/confmodule
+
+notice "trying to get script"
+db_get partman-fuel/script
+
+notice "$RET"
+notice "evaluating script"
+echo "$RET" > /tmp/partman-fuel-script.sh
+eval "$RET"
+

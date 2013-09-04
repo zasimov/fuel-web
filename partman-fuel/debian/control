@@ -1,0 +1,15 @@
+Source: partman-fuel
+Section: debian-installer
+Priority: optional
+Maintainer: Mirantis Inc. <product@mirantis.com>
+Build-Depends: debhelper (>> 4.2), cdbs
+Standards-Version: 0.1.0
+
+Package: partman-fuel
+Architecture: all
+XC-Package-Type: udeb
+Section: debian-installer
+Depends: ${shlibs:Depends}, ${misc:Depends}, parted-udeb, hdparm-udeb
+Description: Custom partitioner
+ This package is udeb and it is supposed to be used as
+ the main partitioner
