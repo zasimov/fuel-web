@@ -36,8 +36,7 @@
                 "volumes_roles_mapping": {
                     "controller": ["os", "image"],
                     "compute": ["os", "vm"],
-                    "cinder": ["os", "cinder"],
-                    "ceph": ["os", "ceph"]
+                    "cinder": ["os", "cinder"]
                 },
                 "volumes": [
                     {
