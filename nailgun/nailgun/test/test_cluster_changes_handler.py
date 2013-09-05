@@ -375,10 +375,10 @@ class TestHandlers(BaseHandlers):
         )
 
         # deploy method call [1][0][1][1]
-        n_rpc_deploy = nailgun.task.manager.rpc.cast. \
-            call_args_list[1][0][1][1]['args']['nodes']
+        n_rpc_deploy = nailgun.task.manager.rpc.cast.call_args_list[
+            1][0][1][1]['args']['deployment_info']
         self.assertEquals(len(n_rpc_deploy), 1)
-        self.assertEquals(n_rpc_deploy[0]['uid'], self.env.nodes[0].id)
+        self.assertEquals(n_rpc_deploy[0]['uid'], str(self.env.nodes[0].id))
 
 
     def test_occurs_error_not_enough_ip_addresses(self):
@@ -406,7 +406,8 @@ class TestHandlers(BaseHandlers):
                 'NetworkConfigurationHandler',
                 kwargs={'cluster_id': cluster.id}),
             json.dumps(net_data),
-            headers=self.default_headers)
+            headers=self.default_headers,
+            expect_errors=True)
 
         task = self.env.launch_deployment()
 
@@ -467,7 +468,8 @@ class TestHandlers(BaseHandlers):
         self.assertEquals(task.status, 'error')
         self.assertEquals(
             task.message,
-            "Not enough controllers, ha mode requires at least 3 controllers")
+            'Not enough controllers, ha_compact '
+            'mode requires at least 3 controllers')
 
     @fake_tasks()
     def test_admin_untagged_intersection(self):
