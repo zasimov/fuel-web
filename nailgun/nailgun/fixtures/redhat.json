@@ -40,14 +40,6 @@
                 },
                 "volumes": [
                     {
-                        "id": "ceph",
-                        "type": "partition",
-                        "min_size": {"generator": "calc_min_ceph_size"},
-                        "label": "Ceph",
-                        "mount": null,
-                        "file_system": null
-                    },
-                    {
                         "id": "os",
                         "type": "vg",
                         "min_size": {"generator": "calc_min_os_size"},
