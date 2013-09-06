@@ -15,11 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import os
-import sys
 import argparse
 import code
-import web
+import sys
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

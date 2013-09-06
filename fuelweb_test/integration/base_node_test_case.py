@@ -150,6 +150,7 @@ class BaseNodeTestCase(BaseTestCase):
             # revert virtual machines
             state = self.environment_states[state_hash]
             self.ci().get_state(state['snapshot_name'])
+            self.ci().environment().resume()
         else:
             # create cluster
             self.ci().get_empty_state()
@@ -159,11 +160,13 @@ class BaseNodeTestCase(BaseTestCase):
             # make a snapshot
             snapshot_name = '%s_%s' % \
                             (name.replace(' ', '_')[:17], state_hash)
+            self.ci().environment().suspend()
             self.ci().environment().snapshot(
                 name=snapshot_name,
                 description=name,
                 force=True,
             )
+            self.ci().environment().resume()
             self.environment_states[state_hash] = {
                 'snapshot_name': snapshot_name,
                 'cluster_name': name,
@@ -209,8 +212,13 @@ class BaseNodeTestCase(BaseTestCase):
         for set_result in set_result_list:
             passed += len(filter(lambda test: test['status'] == 'success',
                                  set_result['tests']))
-            failed += len(filter(lambda test: test['status'] == 'failure',
-                                 set_result['tests']))
+            failed += len(
+                filter(
+                    lambda test: test['status'] == 'failure' or
+                    test['status'] == 'error',
+                    set_result['tests']
+                )
+            )
         self.assertEqual(passed, should_pass, 'Passed tests')
         self.assertEqual(failed, should_fail, 'Failed tests')
 
@@ -410,6 +418,22 @@ class BaseNodeTestCase(BaseTestCase):
             with self.remote().open(key_string) as f:
                 keys.append(RSAKey.from_private_key(f))
         return keys
+
+    @logwrap
+    def update_node_networks(self, node_id, interfaces_dict):
+        interfaces = self.client.get_node_interfaces(node_id)
+        for interface in interfaces:
+            interface_name = interface['name']
+            interface['assigned_networks'] = []
+            for allowed_network in interface['allowed_networks']:
+                key_exists = interface_name in interfaces_dict
+                if key_exists and \
+                        allowed_network['name'] \
+                        in interfaces_dict[interface_name]:
+                    interface['assigned_networks'].append(allowed_network)
+
+        self.client.put_node_interfaces(
+            [{'id': node_id, 'interfaces': interfaces}])
 
     @logwrap
     def update_vlan_network_fixed(

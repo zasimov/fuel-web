@@ -15,7 +15,6 @@
 #    under the License.
 
 import json
-from paste.fixture import TestApp
 
 from nailgun.api.models import Release
 from nailgun.test.base import BaseHandlers
@@ -124,9 +123,3 @@ class TestHandlers(BaseHandlers):
             expect_errors=True
         )
         self.assertEquals(resp.status, 409)
-
-        release_from_db = self.db.query(Release).filter(
-            Release.name == release_name,
-            Release.version == release_version,
-            Release.description == release_description
-        ).one()

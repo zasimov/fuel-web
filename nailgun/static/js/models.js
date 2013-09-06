@@ -54,6 +54,9 @@ define(['utils'], function(utils) {
             }
             return _.isEmpty(errors) ? null : errors;
         },
+        groupings: function() {
+            return {roles: 'Roles', hardware: 'Hardware Info', both: 'Roles and hardware info'};
+        },
         task: function(taskName, status) {
             return this.get('tasks') && this.get('tasks').findTask({name: taskName, status: status});
         },
@@ -93,11 +96,7 @@ define(['utils'], function(utils) {
             return ['multinode', 'ha'];
         },
         availableRoles: function() {
-            var roles = ['controller'];
-            if (this.get('mode') != 'singlenode') {
-                roles.push('compute', 'cinder');
-            }
-            return roles;
+            return this.get('release').get('roles');
         },
         parse: function(response) {
             response.release = new models.Release(response.release);
@@ -155,6 +154,9 @@ define(['utils'], function(utils) {
         },
         nodesAfterDeployment: function() {
             return this.filter(function(node) {return node.get('pending_addition') || !node.get('pending_deletion');});
+        },
+        nodesAfterDeploymentWithRole: function(role) {
+            return _.filter(this.nodesAfterDeployment(), function(node) {return _.contains(_.union(node.get('roles'), node.get('pending_roles')), role);}).length;
         },
         resources: function(resourceName) {
             var resources = this.map(function(node) {return node.resource(resourceName);});
@@ -436,7 +438,7 @@ define(['utils'], function(utils) {
                     }
                 } else if (attribute == 'vlan_start') {
                     if (!_.isNull(attrs.vlan_start) || (attrs.name == 'fixed' && options.net_manager == 'VlanManager')) {
-                        if (_.isNaN(attrs.vlan_start) || !_.isNumber(attrs.vlan_start) || attrs.vlan_start < 1 || attrs.vlan_start > 4094) {
+                        if (!utils.isNaturalNumber(attrs.vlan_start) || attrs.vlan_start < 1 || attrs.vlan_start > 4094) {
                             errors.vlan_start = 'Invalid VLAN ID';
                         }
                     }
@@ -445,7 +447,7 @@ define(['utils'], function(utils) {
                 } else if (attribute == 'gateway' && this.validateIP(attrs.gateway)) {
                     errors.gateway = 'Invalid gateway';
                 } else if (attribute == 'amount') {
-                    if (!attrs.amount || (attrs.amount && (!_.isNumber(attrs.amount) || attrs.amount < 1))) {
+                    if (!utils.isNaturalNumber(attrs.amount)) {
                         errors.amount = 'Invalid amount of networks';
                     } else if (attrs.amount && attrs.amount > 4095 - attrs.vlan_start) {
                         errors.amount = 'Number of networks needs more VLAN IDs than available. Check VLAN ID Range field.';

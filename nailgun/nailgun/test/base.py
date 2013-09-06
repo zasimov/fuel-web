@@ -20,39 +20,35 @@ except ImportError:
     # Runing unit-tests in production environment
     from unittest2.case import TestCase
 
-import os
-import re
+from datetime import datetime
+from functools import partial
+from itertools import izip
 import json
-import time
 import logging
 import mock
+import os
 from random import randint
-from datetime import datetime
-from functools import partial, wraps
-from itertools import izip
+import re
+import time
 
-from paste.fixture import TestApp, AppError
+from paste.fixture import TestApp
 
 import nailgun
-from nailgun.api.models import Node
-from nailgun.api.models import NodeNICInterface
-from nailgun.api.models import Release
 from nailgun.api.models import Cluster
-from nailgun.api.models import Notification
-from nailgun.api.models import Attributes
-from nailgun.api.models import Network
 from nailgun.api.models import NetworkGroup
+from nailgun.api.models import Node
 from nailgun.api.models import NodeAttributes
+from nailgun.api.models import NodeNICInterface
+from nailgun.api.models import Notification
+from nailgun.api.models import Release
 from nailgun.api.models import Task
-from nailgun.api.models import IPAddr
-from nailgun.api.models import Vlan
-from nailgun.logger import logger
 from nailgun.api.urls import urls
-from nailgun.wsgi import build_app
-from nailgun.db import dropdb, syncdb, flush, db
+from nailgun.db import db
+from nailgun.db import flush
+from nailgun.db import syncdb
 from nailgun.fixtures.fixman import upload_fixture
 from nailgun.network.manager import NetworkManager
-from nailgun.network.topology import TopoChecker
+from nailgun.wsgi import build_app
 
 
 class TimeoutError(Exception):
@@ -99,6 +95,7 @@ class Environment(object):
             'version': version,
             'description': u"release_desc" + version,
             'operating_system': 'CensOS',
+            'roles': self.get_default_roles(),
             'networks_metadata': self.get_default_networks_metadata(),
             'attributes_metadata': self.get_default_attributes_metadata(),
             'volumes_metadata': self.get_default_volumes_metadata()
@@ -194,7 +191,7 @@ class Environment(object):
 
         node_data = {
             'mac': mac,
-            'role': 'controller',
+            'roles': ['controller'],
             'status': 'discover',
             'meta': default_metadata
         }
@@ -232,6 +229,14 @@ class Environment(object):
         else:
             node = Node()
             node.timestamp = datetime.now()
+            if 'cluster_id' in node_data:
+                cluster_id = node_data.pop('cluster_id')
+                for cluster in self.clusters:
+                    if cluster.id == cluster_id:
+                        node.cluster = cluster
+                        break
+                else:
+                    node.cluster_id = cluster_id
             for key, value in node_data.iteritems():
                 setattr(node, key, value)
             node.attributes = self.create_attributes()
@@ -359,6 +364,9 @@ class Environment(object):
 
         return nets
 
+    def get_default_roles(self):
+        return ['controller', 'compute', 'cinder']
+
     def get_default_volumes_metadata(self):
         return self.read_fixtures(
             ('openstack',))[0]['fields']['volumes_metadata']
@@ -387,7 +395,7 @@ class Environment(object):
             with open(fxtr_path, "r") as fxtr_file:
                 try:
                     data.extend(json.load(fxtr_file))
-                except:
+                except Exception:
                     logging.error(
                         "Error occurred while loading "
                         "fixture %s" % fxtr_path
@@ -472,14 +480,14 @@ class Environment(object):
             try:
                 self.db.add(n)
                 self.db.refresh(n)
-            except:
+            except Exception:
                 self.nodes.remove(n)
 
     def refresh_clusters(self):
         for n in self.clusters[:]:
             try:
                 self.db.refresh(n)
-            except:
+            except Exception:
                 self.nodes.remove(n)
 
     def _wait_task(self, task, timeout, message):
@@ -567,7 +575,7 @@ class BaseHandlers(TestCase):
         if path is None:
             path = []
 
-        print "Path: {0}".format("->".join(path))
+        print("Path: {0}".format("->".join(path)))
 
         if not isinstance(node1, dict) or not isinstance(node2, dict):
             if isinstance(node1, list):
@@ -664,7 +672,7 @@ def reverse(name, kwargs=None):
     url = urldict[name]
     urlregex = re.compile(url)
     for kwarg in urlregex.groupindex:
-        if not kwarg in kwargs:
+        if kwarg not in kwargs:
             raise KeyError("Invalid argument specified")
         url = re.sub(
             r"\(\?P<{0}>[^)]+\)".format(kwarg),
@@ -690,7 +698,7 @@ def datadiff(data1, data2, branch, p=True):
     if data1 != data2:
         try:
             it = iterator(data1, data2)
-        except:
+        except Exception:
             return [(branch, data1, data2)]
 
         for k in it:
@@ -698,24 +706,24 @@ def datadiff(data1, data2, branch, p=True):
             newbranch.append(k)
 
             if p:
-                print "Comparing branch: %s" % newbranch
+                print("Comparing branch: %s" % newbranch)
             try:
                 try:
                     v1 = data1[k]
                 except (KeyError, IndexError):
                     if p:
-                        print "data1 seems does not have key = %s" % k
+                        print("data1 seems does not have key = %s" % k)
                     diff.append((newbranch, None, data2[k]))
                     continue
                 try:
                     v2 = data2[k]
                 except (KeyError, IndexError):
                     if p:
-                        print "data2 seems does not have key = %s" % k
+                        print("data2 seems does not have key = %s" % k)
                     diff.append((newbranch, data1[k], None))
                     continue
 
-            except Exception as e:
+            except Exception:
                 if p:
                     print("data1 and data2 cannot be compared on "
                           "branch: %s" % newbranch)

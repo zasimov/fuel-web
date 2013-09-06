@@ -1,0 +1,32 @@
+<% var cluster = nodes.cluster %>
+<div class="cluster-toolbar">
+  <% if (cluster) { %>
+    <div class="cluster-toolbar-item cluster-actions">
+      <div class="dropdown">
+        <button class="btn btn-cluster-actions" data-toggle="dropdown"><div class="actions-btn"></div></button>
+      </div>
+    </div>
+    <div class="cluster-toolbar-item nodes-filter">
+      <label>Group By</label>
+      <select name="grouping" <%= nodes.length ? '' : 'disabled' %>>
+        <% var groupings = cluster.groupings() %>
+        <% _.each(_.keys(groupings), function(grouping) { %>
+          <option value="<%= grouping %>" <%= grouping == cluster.get('grouping') ? 'selected' : '' %>><%= groupings[grouping] %></option>
+        <% })%>
+      </select>
+    </div>
+  <% } else { %>
+    <div class="cluster-toolbar-item">
+      <button class="btn btn-go-to-cluster">Back to Environment Node List</button>
+    </div>
+  <% } %>
+  <div class="cluster-toolbar-item pull-right">
+    <button class="btn btn-success btn-assign-roles batch-action-btn" disabled><%= cluster ? 'Reassign' : 'Assign' %> Roles</button>
+  </div>
+  <% if (cluster) { %>
+    <div class="cluster-toolbar-item pull-right">
+      <button class="btn btn-danger btn-delete-nodes batch-action-btn" disabled>Delete Nodes</button>
+    </div>
+  <% } %>
+</div>
+<div class="assign-roles-panel"></div>

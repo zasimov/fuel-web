@@ -145,7 +145,7 @@ class TestNode(BaseNodeTestCase):
             nodes[0]),
             timeout=3 * 60
         )
-        self.run_OSTF(cluster_id=cluster_id, should_fail=12, should_pass=12)
+        self.run_OSTF(cluster_id=cluster_id, should_fail=24, should_pass=0)
 
     @snapshot_errors
     @logwrap
@@ -169,7 +169,6 @@ class TestNode(BaseNodeTestCase):
             self.assertTaskFailed(task, 60 * 2)
         finally:
             ebtables.restore_first_vlan()
-        self.run_OSTF(cluster_id=cluster_id, should_fail=12, should_pass=12)
 
     @snapshot_errors
     @logwrap
@@ -320,6 +319,42 @@ class TestNode(BaseNodeTestCase):
                     str_block_devices,
                     'vdc\s+252:32\s+0\s+20G\s+0\s+disk'
                 )
+
+    @snapshot_errors
+    @logwrap
+    @fetch_logs
+    def test_node_multiple_interfaces(self):
+        self.prepare_environment()
+        cluster_name = 'node interfaces'
+        interfaces_dict = {
+            'eth0': ['management'],
+            'eth1': ['floating', 'public'],
+            'eth2': ['storage'],
+            'eth3': ['fixed']
+        }
+        nodes_dict = {
+            'controller': ['slave-01'],
+            'compute': ['slave-02']
+        }
+        self.bootstrap_nodes(self.nodes().slaves[:2])
+
+        cluster_id = self.create_cluster(name=cluster_name)
+        self.update_nodes(cluster_id, nodes_dict, True, False)
+
+        nailgun_nodes = self.client.list_cluster_nodes(cluster_id)
+        for node in nailgun_nodes:
+            self.update_node_networks(node['id'], interfaces_dict)
+
+        task = self.deploy_cluster(cluster_id)
+        self.assertTaskSuccess(task)
+
+        nailgun_nodes = self.client.list_cluster_nodes(cluster_id)
+        for node in nailgun_nodes:
+            self.assertNetworkConfiguration(node)
+
+        task = self._run_network_verify(cluster_id)
+        self.assertTaskSuccess(task, 60 * 2)
+
 
 if __name__ == '__main__':
     unittest.main()

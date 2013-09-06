@@ -18,32 +18,30 @@
 Handlers dealing with nodes
 """
 
+from datetime import datetime
 import json
 import traceback
-from datetime import datetime
 
 import web
 
-from nailgun.db import db
-from nailgun import notifier
-from nailgun.logger import logger
-from nailgun.errors import errors
-from nailgun.api.models import Node
-from nailgun.api.models import Network
-from nailgun.api.models import NetworkAssignment
-from nailgun.api.models import NodeNICInterface
+from nailgun.api.handlers.base import content_json
+from nailgun.api.handlers.base import JSONHandler
+from nailgun.api.models import Cluster
 from nailgun.api.models import NetworkGroup
-from nailgun.network.topology import TopoChecker
-from nailgun.api.validators.node import NodeValidator
+from nailgun.api.models import Node
+from nailgun.api.models import NodeAttributes
+from nailgun.api.models import NodeNICInterface
 from nailgun.api.validators.network import NetAssignmentValidator
+from nailgun.api.validators.node import NodeValidator
+from nailgun.db import db
+from nailgun.logger import logger
 from nailgun.network.manager import NetworkManager
-from nailgun.api.models import Node, NodeAttributes
-from nailgun.api.handlers.base import JSONHandler, content_json
-from nailgun.api.handlers.base import HandlerRegistrator
+from nailgun.network.topology import TopoChecker
+from nailgun import notifier
 
 
 class NodeHandler(JSONHandler):
-    fields = ('id', 'name', 'meta', 'role', 'progress',
+    fields = ('id', 'name', 'meta', 'progress', 'roles', 'pending_roles',
               'status', 'mac', 'fqdn', 'ip', 'manufacturer', 'platform_name',
               'pending_addition', 'pending_deletion', 'os_platform',
               'error_type', 'online', 'cluster')
@@ -58,14 +56,13 @@ class NodeHandler(JSONHandler):
             network_manager = NetworkManager()
             json_data['network_data'] = network_manager.get_node_networks(
                 instance.id)
-        except:
+        except Exception:
             logger.error(traceback.format_exc())
         return json_data
 
     @content_json
     def GET(self, node_id):
-        """
-        :returns: JSONized Node object.
+        """:returns: JSONized Node object.
         :http: * 200 (OK)
                * 404 (node not found in db)
         """
@@ -74,8 +71,7 @@ class NodeHandler(JSONHandler):
 
     @content_json
     def PUT(self, node_id):
-        """
-        :returns: JSONized Node object.
+        """:returns: JSONized Node object.
         :http: * 200 (OK)
                * 400 (invalid node data specified)
                * 404 (node not found in db)
@@ -88,22 +84,29 @@ class NodeHandler(JSONHandler):
 
         network_manager = NetworkManager()
 
-        for key, value in data.iteritems():
-            # we don't allow to update id explicitly
-            if key == "id":
-                continue
-            setattr(node, key, value)
-            if key == 'cluster_id':
-                if value:
+        if "cluster_id" in data:
+            if data["cluster_id"] is None and node.cluster:
+                node.cluster.clear_pending_changes(node_id=node.id)
+                node.roles = node.pending_roles = []
+            old_cluster_id = node.cluster_id
+            node.cluster_id = data["cluster_id"]
+            if node.cluster_id != old_cluster_id:
+                if old_cluster_id:
+                    network_manager.clear_assigned_networks(node.id)
+                    network_manager.clear_all_allowed_networks(node.id)
+                if node.cluster_id:
                     network_manager.allow_network_assignment_to_all_interfaces(
                         node.id
                     )
                     network_manager.assign_networks_to_main_interface(node.id)
-                else:
-                    network_manager.clear_assigned_networks(node.id)
-                    network_manager.clear_all_allowed_networks(node.id)
+        for key, value in data.iteritems():
+            # we don't allow to update id explicitly
+            # and updated cluster_id before all other fields
+            if key in ("id", "cluster_id"):
+                continue
+            setattr(node, key, value)
         if not node.status in ('provisioning', 'deploying') \
-                and "role" in data or "cluster_id" in data:
+                and "roles" in data or "cluster_id" in data:
             try:
                 node.attributes.volumes = \
                     node.volume_manager.gen_volumes_info()
@@ -121,8 +124,7 @@ class NodeHandler(JSONHandler):
         return self.render(node)
 
     def DELETE(self, node_id):
-        """
-        :returns: Empty string
+        """:returns: Empty string
         :http: * 204 (node successfully deleted)
                * 404 (cluster not found in db)
         """
@@ -136,16 +138,14 @@ class NodeHandler(JSONHandler):
 
 
 class NodeCollectionHandler(JSONHandler):
-    """
-    Node collection handler
+    """Node collection handler
     """
 
     validator = NodeValidator
 
     @content_json
     def GET(self):
-        """
-        May receive cluster_id parameter to filter list
+        """May receive cluster_id parameter to filter list
         of nodes
 
         :returns: Collection of JSONized Node objects.
@@ -164,8 +164,7 @@ class NodeCollectionHandler(JSONHandler):
 
     @content_json
     def POST(self):
-        """
-        :returns: JSONized Node object.
+        """:returns: JSONized Node object.
         :http: * 201 (cluster successfully created)
                * 400 (invalid node data specified)
                * 409 (node with such parameters already exists)
@@ -173,6 +172,14 @@ class NodeCollectionHandler(JSONHandler):
         data = self.checked_data()
 
         node = Node()
+        if "cluster_id" in data:
+            # FIXME(vk): this part is needed only for tests. Normally,
+            # nodes are created only by agent and POST requests don't contain
+            # cluster_id, but our integration and unit tests widely use it.
+            # We need to assign cluster first
+            cluster_id = data.pop("cluster_id")
+            if cluster_id:
+                node.cluster = db.query(Cluster).get(cluster_id)
         for key, value in data.iteritems():
             if key == "id":
                 continue
@@ -255,8 +262,7 @@ class NodeCollectionHandler(JSONHandler):
 
     @content_json
     def PUT(self):
-        """
-        :returns: Collection of JSONized Node objects.
+        """:returns: Collection of JSONized Node objects.
         :http: * 200 (nodes are successfully updated)
                * 400 (invalid nodes data specified)
         """
@@ -284,9 +290,12 @@ class NodeCollectionHandler(JSONHandler):
                     logger.info(msg)
                     notifier.notify("discover", msg, node_id=node.id)
                 db().commit()
-            if nd.get("cluster_id") is None and node.cluster:
-                node.cluster.clear_pending_changes(node_id=node.id)
             old_cluster_id = node.cluster_id
+            if "cluster_id" in nd:
+                if nd["cluster_id"] is None and node.cluster:
+                    node.cluster.clear_pending_changes(node_id=node.id)
+                    node.roles = node.pending_roles = []
+                node.cluster_id = nd["cluster_id"]
             for key, value in nd.iteritems():
                 if is_agent and (key, value) == ("status", "discover") \
                         and node.status == "provisioning":
@@ -317,7 +326,7 @@ class NodeCollectionHandler(JSONHandler):
                             node.attributes.volumes
                         )
                     ),
-                    "role" in nd,
+                    "roles" in nd,
                     "cluster_id" in nd
                 )
                 if any(variants):
@@ -362,8 +371,7 @@ class NodeCollectionHandler(JSONHandler):
 
 
 class NodeNICsHandler(JSONHandler):
-    """
-    Node network interfaces handler
+    """Node network interfaces handler
     """
 
     fields = (
@@ -384,8 +392,7 @@ class NodeNICsHandler(JSONHandler):
 
     @content_json
     def GET(self, node_id):
-        """
-        :returns: Collection of JSONized Node interfaces.
+        """:returns: Collection of JSONized Node interfaces.
         :http: * 200 (OK)
                * 404 (node not found in db)
         """
@@ -394,8 +401,7 @@ class NodeNICsHandler(JSONHandler):
 
 
 class NodeCollectionNICsHandler(JSONHandler):
-    """
-    Node collection network interfaces handler
+    """Node collection network interfaces handler
     """
 
     model = NetworkGroup
@@ -404,8 +410,7 @@ class NodeCollectionNICsHandler(JSONHandler):
 
     @content_json
     def PUT(self):
-        """
-        :returns: Collection of JSONized Node objects.
+        """:returns: Collection of JSONized Node objects.
         :http: * 200 (nodes are successfully updated)
                * 400 (invalid nodes data specified)
         """
@@ -423,14 +428,12 @@ class NodeCollectionNICsHandler(JSONHandler):
 
 
 class NodeNICsDefaultHandler(JSONHandler):
-    """
-    Node default network interfaces handler
+    """Node default network interfaces handler
     """
 
     @content_json
     def GET(self, node_id):
-        """
-        :returns: Collection of default JSONized interfaces for node.
+        """:returns: Collection of default JSONized interfaces for node.
         :http: * 200 (OK)
                * 404 (node not found in db)
         """
@@ -475,16 +478,14 @@ class NodeNICsDefaultHandler(JSONHandler):
 
 
 class NodeCollectionNICsDefaultHandler(NodeNICsDefaultHandler):
-    """
-    Node collection default network interfaces handler
+    """Node collection default network interfaces handler
     """
 
     validator = NetAssignmentValidator
 
     @content_json
     def GET(self):
-        """
-        May receive cluster_id parameter to filter list
+        """May receive cluster_id parameter to filter list
         of nodes
 
         :returns: Collection of JSONized Nodes interfaces.
@@ -509,8 +510,8 @@ class NodeCollectionNICsDefaultHandler(NodeNICsDefaultHandler):
 
 
 class NodeNICsVerifyHandler(JSONHandler):
-    """
-    Node NICs verify handler
+    """Node NICs verify handler
+    Class is proof of concept. Not ready for use.
     """
 
     fields = (
@@ -528,28 +529,25 @@ class NodeNICsVerifyHandler(JSONHandler):
 
     @content_json
     def POST(self):
-        """
-        :returns: Collection of JSONized Nodes interfaces.
+        """:returns: Collection of JSONized Nodes interfaces.
         :http: * 200 (OK)
         """
         data = self.validator.validate_structure(web.data())
         for node in data:
             self.validator.verify_data_correctness(node)
         if TopoChecker.is_assignment_allowed(data):
-            return map(self.render, nodes)
-        topo = TopoChecker.resolve_topo_conflicts(data)
+            return map(self.render, data)
+        topo, fields_with_conflicts = TopoChecker.resolve_topo_conflicts(data)
         return map(self.render, topo, fields=fields_with_conflicts)
 
 
 class NodesAllocationStatsHandler(object):
-    """
-    Node allocation stats handler
+    """Node allocation stats handler
     """
 
     @content_json
     def GET(self):
-        """
-        :returns: Total and unallocated nodes count.
+        """:returns: Total and unallocated nodes count.
         :http: * 200 (OK)
         """
         unallocated_nodes = db().query(Node).filter_by(cluster_id=None).count()

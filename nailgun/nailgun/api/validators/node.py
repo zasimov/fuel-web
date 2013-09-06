@@ -13,14 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nailgun.db import db
-from nailgun.errors import errors
-from nailgun.logger import logger
 from nailgun.api.models import Node
-from nailgun.volumes.manager import VolumeManager
 from nailgun.api.validators.base import BasicValidator
 from nailgun.api.validators.json_schema.disks \
     import disks_simple_format_schema
+from nailgun.db import db
+from nailgun.errors import errors
 
 
 class MetaInterfacesValidator(BasicValidator):
@@ -104,7 +102,7 @@ class NodeValidator(BasicValidator):
                 "Node data must be dict",
                 log_message=True
             )
-        if not "mac" in d:
+        if "mac" not in d:
             raise errors.InvalidData(
                 "No mac address specified",
                 log_message=True
@@ -127,7 +125,7 @@ class NodeValidator(BasicValidator):
             MetaValidator.validate_create(d['meta'])
         return d
 
-    # TODO: fix this using DRY
+    # TODO(NAME): fix this using DRY
     @classmethod
     def validate_existent_node_mac_create(cls, data):
         if 'meta' in data:
@@ -147,6 +145,17 @@ class NodeValidator(BasicValidator):
                 return existent_node
 
     @classmethod
+    def validate_roles(cls, data, node):
+        if 'roles' in data:
+            if not isinstance(data['roles'], list) or \
+                    any(not isinstance(role, (
+                        str, unicode)) for role in data['roles']):
+                raise errors.InvalidData(
+                    "Role list must be list of strings",
+                    log_message=True
+                )
+
+    @classmethod
     def validate_update(cls, data):
         d = cls.validate_json(data)
         if "status" in d and d["status"] not in Node.NODE_STATUSES:
@@ -154,6 +163,9 @@ class NodeValidator(BasicValidator):
                 "Invalid status for node",
                 log_message=True
             )
+        if 'roles' in d and 'id' in d:
+            node = db().query(Node).get(d['id'])
+            cls.validate_roles(d, node)
         if 'meta' in d:
             d['meta'] = MetaValidator.validate_update(d['meta'])
         return d
@@ -183,11 +195,15 @@ class NodeValidator(BasicValidator):
                             "Invalid MAC specified",
                             log_message=True
                         )
-                if "id" in nd and not q.get(nd["id"]):
-                    raise errors.InvalidData(
-                        "Invalid ID specified",
-                        log_message=True
-                    )
+                if "id" in nd:
+                    existent_node = q.get(nd["id"])
+                    if not existent_node:
+                        raise errors.InvalidData(
+                            "Invalid ID specified",
+                            log_message=True
+                        )
+                if 'roles' in nd:
+                    cls.validate_roles(nd, existent_node)
             if 'meta' in nd:
                 nd['meta'] = MetaValidator.validate_update(nd['meta'])
         return d

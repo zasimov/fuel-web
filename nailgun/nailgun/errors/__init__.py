@@ -14,9 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nailgun.logger import logger
 from nailgun.errors.base import NailgunException
-
 
 default_messages = {
     # common errors
@@ -26,6 +24,7 @@ default_messages = {
     # node discovering errors
     "InvalidInterfacesInfo": "Invalid interfaces info",
     "InvalidMetadata": "Invalid metadata specified for node",
+    "CannotFindNodeIDForDiscovering": "Cannot find node for discovering",
 
     # deployment errors
     "DeploymentAlreadyStarted": "Deployment already started",
@@ -38,7 +37,7 @@ default_messages = {
 
     # disk errors
     "NotEnoughFreeSpace": "Not enough free space",
-    "CannotFindVolumesInfoForRole": "Cannot fund volumes info for role",
+    "CannotFindVolumesInfoForRole": "Cannot find volumes info for role",
 
     # network errors
     "AdminNetworkNotFound": "Admin network info not found",
