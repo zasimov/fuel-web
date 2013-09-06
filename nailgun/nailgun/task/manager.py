@@ -336,14 +336,8 @@ class VerifyNetworksTaskManager(TaskManager):
             # in the orchestrator, and UI does it by task name.
             task.name = 'verify_networks'
 
-            verify_task = Task(name='verify_networks',
-                cluster=self.cluster,
-                parent_id=task.id)
-            db().add(verify_task)
-            db().commit()
-
             self._call_silently(
-                verify_task,
+                task,
                 tasks.VerifyNetworksTask('verify_networks'),
                 vlan_ids
             )

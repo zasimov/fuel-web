@@ -594,7 +594,7 @@ class NailgunReceiver(object):
         if nodes:
             for node, dhcp_response in nodes.iteritems():
                 for row in dhcp_response:
-                    if True:
+                    if validator(row):
                         messages.append(message_template.format(**row))
             status = status if not messages else "error"
             error_msg = '\n'.join(messages) if messages else error_msg

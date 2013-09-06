@@ -35,7 +35,6 @@ import nailgun.rpc as rpc
 from nailgun.settings import settings
 from nailgun.task.fake import FAKE_THREADS
 from nailgun.task.helpers import TaskHelper
-from nailgun.utils import cached_value
 
 
 def fake_cast(queue, messages, **kwargs):
@@ -558,7 +557,6 @@ class VerifyNetworksTask(object):
     def __init__(self, task_name):
         self.task_name = task_name
 
-    @cached_value.memoize(ttl=20)
     def _message(self, task, data):
         nodes = []
         for n in task.cluster.nodes:
@@ -588,13 +586,14 @@ class VerifyNetworksTask(object):
                      'nodes': nodes}}
 
     def execute(self, task, data):
+        message = self._message(task, data)
         logger.debug("%s method is called with: %s",
-                    self.task_name, self._message(task, data))
+                    self.task_name, message)
 
-        task.cache = self._message(task, data)
+        task.cache = message
         db().add(task)
         db().commit()
-        rpc.cast('naily', self._message(task, data))
+        rpc.cast('naily', message)
 
 
 class CheckNetworksTask(object):

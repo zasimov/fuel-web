@@ -71,6 +71,7 @@ class TestVerifyNetworks(BaseHandlers):
         self.assertEqual(task.status, "ready")
         self.assertEqual(task.message, None)
 
+
     def test_verify_networks_resp_error(self):
         self.env.create(
             cluster_kwargs={},
@@ -341,6 +342,11 @@ class TestVerifyNetworks(BaseHandlers):
                         }]
         self.assertEqual(task.result, error_nodes)
 
+
+class TestDhcpCheckTask(BaseHandlers):
+
+    def test_check_dhcp_resp(self):
+        pass
 
 class TestConsumer(BaseHandlers):
 
