@@ -16,6 +16,7 @@
 
 import json
 import uuid
+from mock import patch
 
 from nailgun.api.models import Attributes
 from nailgun.api.models import Cluster
@@ -345,8 +346,100 @@ class TestVerifyNetworks(BaseHandlers):
 
 class TestDhcpCheckTask(BaseHandlers):
 
-    def test_check_dhcp_resp(self):
-        pass
+
+    def setUp(self):
+        super(TestDhcpCheckTask, self).setUp()
+        self.receiver = rcvr.NailgunReceiver()
+        self.env.create(
+            cluster_kwargs={},
+            nodes_kwargs=[
+                {"api": False},
+                {"api": False}
+            ]
+        )
+        cluster_db = self.env.clusters[0]
+        self.node1, self.node2 = self.env.nodes
+        nets_sent = [{'iface': 'eth0', 'vlans': range(100, 105)}]
+
+        self.task = Task(
+            name="check_dhcp",
+            cluster_id=cluster_db.id
+        )
+        self.db.add(self.task)
+        self.db.commit()
+
+
+    def test_check_dhcp_resp_master_mac(self):
+        kwargs = {
+            'task_uuid': self.task.uuid,
+            'status': 'ready',
+            'nodes': {
+                str(self.node1.id): [{'mac': 'bc:ae:c5:e0:f5:85',
+                            'server_id':'10.20.0.2',
+                            'yiaddr':'10.20.0.133',
+                            'iface':'eth0'}],
+                str(self.node2.id): [{'mac': 'bc:ae:c5:e0:f5:85',
+                            'server_id':'10.20.0.2',
+                            'yiaddr':'10.20.0.131',
+                            'iface':'eth0'}]
+            }
+        }
+
+        with patch.object(self.receiver,'_get_master_macs') as master_macs:
+            master_macs.return_value = [{'addr': 'bc:ae:c5:e0:f5:85'}]
+            self.receiver.check_dhcp_resp(**kwargs)
+            self.db.refresh(self.task)
+        self.assertEqual(self.task.status, "ready")
+        self.assertEqual(self.task.result, {})
+
+
+    def test_check_dhcp_resp_roque_dhcp_mac(self):
+        kwargs = {
+            'task_uuid': self.task.uuid,
+            'status': 'ready',
+            'nodes': {
+                str(self.node1.id): [{
+                    'mac': 'aa:ae:aa:e0:f5:85',
+                    'server_id':'10.20.0.191',
+                    'yiaddr':'10.20.0.133',
+                    'iface':'eth0'},{
+                    'mac': 'aa:ae:aa:e0:f5:99',
+                    'server_id':'10.20.0.193',
+                    'yiaddr':'10.20.0.133',
+                    'iface':'eth0'
+                    }],
+            }
+        }
+        with patch.object(self.receiver,'_get_master_macs') as master_macs:
+            master_macs.return_value = [{'addr': 'bc:ae:c5:e0:f5:85'}]
+            self.receiver.check_dhcp_resp(**kwargs)
+            self.db.refresh(self.task)
+        self.assertEqual(self.task.status, "error")
+        self.assertEqual(self.task.result, kwargs['nodes'])
+
+    def test_check_dhcp_resp_empty_nodes(self):
+        kwargs = {
+            'task_uuid': self.task.uuid,
+            'status': 'ready'
+        }
+        with patch.object(self.receiver,'_get_master_macs') as master_macs:
+            master_macs.return_value = [{'addr': 'bc:ae:c5:e0:f5:85'}]
+            self.receiver.check_dhcp_resp(**kwargs)
+            self.db.refresh(self.task)
+        self.assertEqual(self.task.status, "ready")
+        self.assertEqual(self.task.result, {})
+
+    def test_check_dhcp_resp_empty_nodes_erred(self):
+        kwargs = {
+            'task_uuid': self.task.uuid,
+            'status': 'error'
+        }
+        with patch.object(self.receiver, '_get_master_macs') as master_macs:
+            self.receiver.check_dhcp_resp(**kwargs)
+            self.db.refresh(self.task)
+        self.assertEqual(self.task.status, 'error')
+        self.assertEqual(self.task.result, {})
+
 
 class TestConsumer(BaseHandlers):
 

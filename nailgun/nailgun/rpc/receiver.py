@@ -18,6 +18,7 @@ import itertools
 import json
 import traceback
 import netifaces
+import collections
 
 from sqlalchemy import or_
 
@@ -568,6 +569,18 @@ class NailgunReceiver(object):
                                       progress, error_msg, result)
 
     @classmethod
+    def _master_networks_gen(cls, ifaces):
+        for iface in ifaces:
+            iface_data = netifaces.ifaddresses(iface)
+            if netifaces.AF_LINK in iface_data:
+                yield netifaces.ifaddresses(iface)[netifaces.AF_LINK]
+
+    @classmethod
+    def _get_master_macs(cls):
+        return itertools.chain(*cls._master_networks_gen(
+            netifaces.interfaces()))
+
+    @classmethod
     def check_dhcp_resp(cls, **kwargs):
         """
         """
@@ -581,14 +594,12 @@ class NailgunReceiver(object):
         status = kwargs.get('status')
         progress = kwargs.get('progress')
 
-        master_networks = itertools.chain(*get_master_networks(
-                                          netifaces.interfaces()))
-
-        macs = [item['addr'] for item in master_networks]
+        macs = [item['addr'] for item in cls._get_master_macs()]
         logger.debug('Mac addr on master node %s', macs)
         validator = lambda row: row['mac'] not in macs
 
         messages = []
+        result = collections.defaultdict(list)
         message_template = ("Dhcp server on {server_id}"
                             "- {mac} from node {yiaddr} on {iface}.")
         if nodes:
@@ -596,12 +607,11 @@ class NailgunReceiver(object):
                 for row in dhcp_response:
                     if validator(row):
                         messages.append(message_template.format(**row))
+                        result[node].append(row)
             status = status if not messages else "error"
             error_msg = '\n'.join(messages) if messages else error_msg
         TaskHelper.update_task_status(task_uuid, status,
-                                      progress, error_msg, nodes)
-
-
+                                      progress, error_msg, result)
 
     # Red Hat related callbacks
 
@@ -785,10 +795,3 @@ class NailgunReceiver(object):
         # TODO(NAME): remove this ugly checks
         if error_message != 'Task aborted':
             notifier.notify('error', error_message)
-
-
-def get_master_networks(ifaces):
-    for iface in ifaces:
-        iface_data = netifaces.ifaddresses(iface)
-        if netifaces.AF_LINK in iface_data:
-            yield netifaces.ifaddresses(iface)[netifaces.AF_LINK]

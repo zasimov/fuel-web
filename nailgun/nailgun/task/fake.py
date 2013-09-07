@@ -339,6 +339,14 @@ class FakeVerificationThread(FakeThread):
             self.sleep(tick_interval)
 
 
+class FakeCheckingDhcpThread(FakeThread):
+    def message_gen(self):
+        self.sleep(self.tick_interval)
+        error = self.params.get("error")
+        if error:
+            err_msg = 'Fake error message'
+
+
 class FakeRedHatCredentials(FakeAmpqThread):
     def message_gen(self):
         self.sleep(self.tick_interval)
@@ -444,6 +452,7 @@ FAKE_THREADS = {
     'deploy': FakeDeploymentThread,
     'remove_nodes': FakeDeletionThread,
     'verify_networks': FakeVerificationThread,
+    'check_dhcp': FakeCheckingDhcpThread,
     'download_release': DownloadReleaseThread,
     'check_redhat_credentials': FakeRedHatCredentials,
     'check_redhat_licenses': FakeRedHatLicenses,
