@@ -339,12 +339,36 @@ class FakeVerificationThread(FakeThread):
             self.sleep(tick_interval)
 
 
-class FakeCheckingDhcpThread(FakeThread):
+class FakeCheckingDhcpThread(FakeAmpqThread):
+    """Thread to be used with test_task_managers.py
+    """
+
+    @property
+    def _message(self):
+        """Example of message with discovered dhcp server
+        """
+        return {'task_uuid': self.task_uuid,
+                'error': '',
+                'status': 'ready',
+                'progress': 100,
+                'nodes': {'5':
+                    [{'mac': 'bc:ae:c5:e0:f5:85',
+                      'server_id':'10.20.0.157',
+                      'yiaddr':'10.20.0.133',
+                      'iface':'eth0'}],
+                        '6':
+                    [{'mac': 'bc:ae:c5:e0:f5:85',
+                      'server_id':'10.20.0.157',
+                      'yiaddr':'10.20.0.131',
+                      'iface':'eth0'}]}
+                }
+
     def message_gen(self):
         self.sleep(self.tick_interval)
-        error = self.params.get("error")
-        if error:
-            err_msg = 'Fake error message'
+        if self.params.get("error"):
+            return self.error_message_gen
+        else:
+            return (self._message,)
 
 
 class FakeRedHatCredentials(FakeAmpqThread):

@@ -620,6 +620,7 @@ class Task(Base):
         'check_networks',
         'verify_networks',
         'check_dhcp',
+        'verify_network_connectivity',
 
         # plugin
         'install_plugin',

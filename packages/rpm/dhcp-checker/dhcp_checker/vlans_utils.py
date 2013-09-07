@@ -15,8 +15,12 @@ from dhcp_checker import utils
 import re
 import traceback
 import imp
-# net_probe rpm should be refactored tobe importable
-net_probe = imp.load_source('net_probe', '/usr/bin/net_probe.py')
+import sys
+try:
+    # net_probe rpm should be refactored tobe importable
+    net_probe = imp.load_source('net_probe', '/usr/bin/net_probe.py')
+except:
+    sys.stderr.write("net_probe couldn't be imported. DHCP check with vlans won't work.")
 
 class VlansActor(net_probe.Actor):
 

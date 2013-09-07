@@ -582,12 +582,18 @@ class NailgunReceiver(object):
 
     @classmethod
     def check_dhcp_resp(cls, **kwargs):
-        """
+        """Receiver method for check_dhcp task
+        For example of kwargs check FakeCheckingDhcpThread
         """
         logger.info(
             "RPC method check_dhcp_resp received: %s" %
             json.dumps(kwargs)
         )
+        messages = []
+        result = collections.defaultdict(list)
+        message_template = ("Dhcp server on {server_id}"
+                            "- {mac} from node {yiaddr} on {iface}.")
+
         task_uuid = kwargs.get('task_uuid')
         nodes = kwargs.get('nodes')
         error_msg = kwargs.get('error')
@@ -596,16 +602,11 @@ class NailgunReceiver(object):
 
         macs = [item['addr'] for item in cls._get_master_macs()]
         logger.debug('Mac addr on master node %s', macs)
-        validator = lambda row: row['mac'] not in macs
 
-        messages = []
-        result = collections.defaultdict(list)
-        message_template = ("Dhcp server on {server_id}"
-                            "- {mac} from node {yiaddr} on {iface}.")
         if nodes:
             for node, dhcp_response in nodes.iteritems():
                 for row in dhcp_response:
-                    if validator(row):
+                    if row['mac'] not in macs:
                         messages.append(message_template.format(**row))
                         result[node].append(row)
             status = status if not messages else "error"

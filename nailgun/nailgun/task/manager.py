@@ -336,20 +336,25 @@ class VerifyNetworksTaskManager(TaskManager):
             # in the orchestrator, and UI does it by task name.
             task.name = 'verify_networks'
 
-            self._call_silently(
-                task,
-                tasks.VerifyNetworksTask('verify_networks'),
-                vlan_ids
+            connectivity_subtask = Task(
+                name='verify_network_connectivity',
+                cluster=self.cluster,
+                parent_id=task.id
             )
+            db().add(connectivity_subtask)
 
             dhcp_subtask = Task(
                 name='check_dhcp',
                 cluster=self.cluster,
                 parent_id=task.id)
             db().add(dhcp_subtask)
-
             db().commit()
 
+            self._call_silently(
+                connectivity_subtask,
+                tasks.VerifyNetworksTask('verify_networks'),
+                vlan_ids
+            )
 
             self._call_silently(
                 dhcp_subtask,
