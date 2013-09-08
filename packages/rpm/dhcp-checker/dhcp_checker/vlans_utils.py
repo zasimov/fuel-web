@@ -20,7 +20,7 @@ try:
     # net_probe rpm should be refactored tobe importable
     net_probe = imp.load_source('net_probe', '/usr/bin/net_probe.py')
 except:
-    sys.stderr.write("net_probe couldn't be imported. DHCP check with vlans won't work.")
+    sys.stderr.write("net_probe couldn't be imported. DHCP call 'vlans' won't work.")
 
 class VlansActor(net_probe.Actor):
 
@@ -33,7 +33,6 @@ class VlansActor(net_probe.Actor):
             interfaces[iface] = ', '.join(str(v) for v in vlans)
         self.logger = self._define_logger()
         super(VlansActor, self).__init__({'interfaces': interfaces})
-
 
     def _vlans_str_generator(self):
         for iface, vlan in self._iface_vlan_iterator():

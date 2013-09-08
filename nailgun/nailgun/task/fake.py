@@ -351,22 +351,23 @@ class FakeCheckingDhcpThread(FakeAmpqThread):
                 'error': '',
                 'status': 'ready',
                 'progress': 100,
-                'nodes': {'5':
-                    [{'mac': 'bc:ae:c5:e0:f5:85',
-                      'server_id':'10.20.0.157',
-                      'yiaddr':'10.20.0.133',
-                      'iface':'eth0'}],
-                        '6':
-                    [{'mac': 'bc:ae:c5:e0:f5:85',
-                      'server_id':'10.20.0.157',
-                      'yiaddr':'10.20.0.131',
-                      'iface':'eth0'}]}
+                'nodes': {
+                    '90':
+                        [{'mac': 'bc:ae:c5:e0:f5:85',
+                          'server_id':'10.20.0.157',
+                          'yiaddr':'10.20.0.133',
+                          'iface':'eth0'}],
+                    '91':
+                        [{'mac': 'bc:ae:c5:e0:f5:85',
+                          'server_id':'10.20.0.157',
+                          'yiaddr':'10.20.0.131',
+                          'iface':'eth0'}]}
                 }
 
     def message_gen(self):
         self.sleep(self.tick_interval)
-        if self.params.get("error"):
-            return self.error_message_gen
+        if self.params.get("dhcp_error"):
+            return self.error_message_gen()
         else:
             return (self._message,)
 
