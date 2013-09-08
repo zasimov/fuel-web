@@ -112,7 +112,9 @@ class TaskHelper(object):
 
     @classmethod
     def update_task_status(cls, uuid, status, progress, msg="",
-                           result=None):
+                           result=None, update_parent_result=False):
+        # verify_networks - task is expecting to receive result with
+        # some data if connectivity_verification fails
         logger.debug("Updating task: %s", uuid)
         task = db().query(Task).filter_by(uuid=uuid).first()
         if not task:
@@ -142,13 +144,17 @@ class TaskHelper(object):
                          task.cluster_id, status)
             cls.update_cluster_status(uuid)
         if task.parent:
-            logger.debug("Updating parent task: %s", task.parent.uuid)
-            cls.update_parent_task(task.parent.uuid)
+            logger.debug("Updating parent task: %s. Result %s.",
+                task.parent.uuid, result)
+            result = result if update_parent_result else None
+            cls.update_parent_task(task.parent.uuid, result=result)
 
     @classmethod
-    def update_parent_task(cls, uuid):
+    def update_parent_task(cls, uuid, result=None):
         task = db().query(Task).filter_by(uuid=uuid).first()
         subtasks = task.subtasks
+        if not result is None:
+            task.result = result
         if len(subtasks):
             if all(map(lambda s: s.status == 'ready', subtasks)):
                 task.status = 'ready'

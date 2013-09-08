@@ -361,6 +361,7 @@ class VerifyNetworksTaskManager(TaskManager):
                 tasks.VerifyNetworksTask('check_dhcp'),
                 vlan_ids
             )
+            db().refresh(task)
         return task
 
 

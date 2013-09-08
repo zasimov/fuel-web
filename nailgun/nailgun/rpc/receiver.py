@@ -566,7 +566,8 @@ class NailgunReceiver(object):
             logger.error(error_msg)
 
         TaskHelper.update_task_status(task_uuid, status,
-                                      progress, error_msg, result)
+                                      progress, error_msg, result,
+                                      update_parent_result=True)
 
     @classmethod
     def _master_networks_gen(cls, ifaces):
@@ -591,8 +592,8 @@ class NailgunReceiver(object):
         )
         messages = []
         result = collections.defaultdict(list)
-        message_template = ("Dhcp server on {server_id}"
-                            "- {mac} from node {yiaddr} on {iface}.")
+        message_template = ("Dhcp server on {server_id} - {mac}."
+                            "Discovered from node {yiaddr} on {iface}.")
 
         task_uuid = kwargs.get('task_uuid')
         nodes = kwargs.get('nodes')

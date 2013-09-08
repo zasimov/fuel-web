@@ -27,7 +27,6 @@ BOOTSTRAP_RPMS:=\
 	vconfig \
 	vim-minimal \
 	wget \
-	dhcp-checker
 
 
 BOOTSTRAP_RPMS_GARBAGE:=\
@@ -42,6 +41,7 @@ BOOTSTRAP_RPMS_CUSTOM:=\
 	nailgun-agent \
 	nailgun-mcagents \
 	nailgun-net-check \
+	dhcp-checker
 
 define yum_local_repo
 [mirror]

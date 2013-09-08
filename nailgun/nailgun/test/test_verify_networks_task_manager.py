@@ -130,3 +130,18 @@ class TestVerifyNetworkTaskManagers(BaseHandlers):
             )
         )
         self.assertEquals(mocked_rpc.called, False)
+
+    @fake_tasks()
+    def test_verifies_supertask_uses_connectivity_result(self, macs_mock):
+        """Test verifies that supertask will use result from subtask
+        verify_network_connectivity, cause for now UI expecting this result
+        to be used for network result formulation
+        """
+        macs_mock.return_value = self.not_master_macs
+
+        task = self.env.launch_verify_networks()
+        self.env.wait_error(task, 30)
+        connectivity_subtask = next((s for s in task.subtasks \
+            if s.name == 'verify_network_connectivity'))
+        self.assertEqual(connectivity_subtask.status, 'ready')
+        self.assertEqual(task.result, connectivity_subtask.result)
