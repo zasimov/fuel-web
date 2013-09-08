@@ -353,13 +353,13 @@ class FakeCheckingDhcpThread(FakeAmpqThread):
                 'progress': 100,
                 'nodes': {
                     '90':
-                        [{'mac': 'bc:ae:c5:e0:f5:85',
+                        [{'mac': 'ee:ae:c5:e0:f5:17',
                           'server_id':'10.20.0.157',
                           'yiaddr':'10.20.0.133',
                           'iface':'eth0'}],
                     '91':
                         [{'mac': 'bc:ae:c5:e0:f5:85',
-                          'server_id':'10.20.0.157',
+                          'server_id':'10.20.0.20',
                           'yiaddr':'10.20.0.131',
                           'iface':'eth0'}]}
                 }

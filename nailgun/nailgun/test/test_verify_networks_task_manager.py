@@ -37,7 +37,8 @@ from nailgun.test.base import reverse
 class TestVerifyNetworkTaskManagers(BaseHandlers):
 
     def setUp(self):
-        self.master_macs = [{'addr': 'bc:ae:c5:e0:f5:85'}]
+        self.master_macs = [{'addr': 'bc:ae:c5:e0:f5:85'},
+                            {'addr': 'ee:ae:c5:e0:f5:17'}]
         self.not_master_macs = [{'addr': 'ee:ae:ee:e0:f5:85'}]
 
         super(TestVerifyNetworkTaskManagers, self).setUp()
