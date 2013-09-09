@@ -605,11 +605,16 @@ class NailgunReceiver(object):
         logger.debug('Mac addr on master node %s', macs)
 
         if nodes:
-            for node, dhcp_response in nodes.iteritems():
-                for row in dhcp_response:
-                    if row['mac'] not in macs:
-                        messages.append(message_template.format(**row))
-                        result[node].append(row)
+            for node in nodes:
+                if node['status'] == 'ready':
+                    for row in node['data']:
+                        if row['mac'] not in macs:
+                            messages.append(message_template.format(**row))
+                            result[node['uid']].append(row)
+                elif node['status'] == 'error':
+                    messages.append(node.get('error_msg',
+                                             ('Dhcp check method failed.'
+                                              ' Check logs for details.')))
             status = status if not messages else "error"
             error_msg = '\n'.join(messages) if messages else error_msg
         TaskHelper.update_task_status(task_uuid, status,
