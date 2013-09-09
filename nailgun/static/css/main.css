@@ -1746,7 +1746,7 @@ h6.page-title {
 }
 
 .networks-table .range-row-header > div:first-child {
-  margin-left: 178px;
+  margin-left: 192px;
 }
 
 .networks-table .range-row-header {
@@ -3512,6 +3512,7 @@ input.error:focus {
   -webkit-box-sizing: border-box;
   font-weight: 600;
   margin-top: 4px;
+  margin-right: 14px;
   overflow: hidden;
   cursor: default;
 }
