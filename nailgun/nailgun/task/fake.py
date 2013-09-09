@@ -359,9 +359,9 @@ class FakeCheckingDhcpThread(FakeAmpqThread):
                           'iface':'eth0'}],
                     '91':
                         [{'mac': 'bc:ae:c5:e0:f5:85',
-                          'server_id':'10.20.0.20',
-                          'yiaddr':'10.20.0.131',
-                          'iface':'eth0'}]}
+                          'server_id': '10.20.0.20',
+                          'yiaddr': '10.20.0.131',
+                          'iface': 'eth0'}]}
                 }
 
     def message_gen(self):

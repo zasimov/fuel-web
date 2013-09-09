@@ -72,7 +72,6 @@ class TestVerifyNetworks(BaseHandlers):
         self.assertEqual(task.status, "ready")
         self.assertEqual(task.message, None)
 
-
     def test_verify_networks_resp_error(self):
         self.env.create(
             cluster_kwargs={},
@@ -384,7 +383,8 @@ class TestDhcpCheckTask(BaseHandlers):
             }
         }
 
-        with patch.object(self.receiver,'_get_master_macs') as master_macs:
+        with patch('nailgun.rpc.receiver.NailgunReceiver._get_master_macs') \
+            as master_macs:
             master_macs.return_value = [{'addr': 'bc:ae:c5:e0:f5:85'}]
             self.receiver.check_dhcp_resp(**kwargs)
             self.db.refresh(self.task)
@@ -422,7 +422,7 @@ class TestDhcpCheckTask(BaseHandlers):
             'task_uuid': self.task.uuid,
             'status': 'ready'
         }
-        with patch.object(self.receiver,'_get_master_macs') as master_macs:
+        with patch.object(self.receiver, '_get_master_macs') as master_macs:
             master_macs.return_value = [{'addr': 'bc:ae:c5:e0:f5:85'}]
             self.receiver.check_dhcp_resp(**kwargs)
             self.db.refresh(self.task)
