@@ -28,9 +28,10 @@ import json
 import web
 import netaddr
 from sqlalchemy.orm import object_mapper, ColumnProperty
-from sqlalchemy import or_, in_
-from shotgun.config import Config
-from shotgun.manager import Manager
+from sqlalchemy import or_
+
+from shotgun.manager import Manager as ShotgunManager
+from shotgun.config import Config as ShotgunConfig
 
 import nailgun.rpc as rpc
 from nailgun.db import db
@@ -892,12 +893,14 @@ class RedHatCheckLicensesTask(RedHatTask):
 class DumpTask(object):
     @classmethod
     def conf(cls):
+        logger.debug("Preparing config for snapshot")
         nodes = db().query(Node).filter(
             Node.status.in_(['ready', 'provisioned', 'deploying', 'error'])
         ).all()
 
         dump_conf = settings.DUMP
         dump_conf['dump_roles']['slave'] = [n.fqdn for n in nodes]
+        logger.debug("Slave nodes: %s", ", ".join(dump_conf['dump_roles']['slave']))
         return dump_conf
 
     @classmethod
@@ -908,6 +911,7 @@ class DumpTask(object):
             'respond_to': 'dump_environment_resp',
             'args': {
                 'task_uuid': task.uuid,
+                'lastdump': settings.DUMP["lastdump"]
             }
         }
         task.cache = message
@@ -917,7 +921,7 @@ class DumpTask(object):
 
 
 def dump():
-    conf = Config(DumpTask.conf())
-    manager = Manager(conf)
+    logger.debug("Starting snapshot procedure")
+    conf = ShotgunConfig(DumpTask.conf())
+    manager = ShotgunManager(conf)
     print manager.snapshot()
-
