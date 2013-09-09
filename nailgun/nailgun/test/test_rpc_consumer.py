@@ -408,7 +408,7 @@ class TestDhcpCheckTask(BaseHandlers):
                                 'yiaddr': '10.20.0.131',
                                 'iface': 'eth0'}]}]
         }
-        with patch.object(self.receiver,'_get_master_macs') as master_macs:
+        with patch.object(self.receiver, '_get_master_macs') as master_macs:
             master_macs.return_value = [{'addr': 'bc:ae:c5:e0:f5:85'}]
             self.receiver.check_dhcp_resp(**kwargs)
             self.db.refresh(self.task)
