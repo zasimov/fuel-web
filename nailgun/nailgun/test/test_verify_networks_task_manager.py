@@ -15,19 +15,10 @@
 #    under the License.
 
 import json
-import time
-import unittest
 from mock import patch
 
 from nailgun.settings import settings
 
-from nailgun.api.models import Cluster
-from nailgun.api.models import Node
-from nailgun.api.models import Notification
-from nailgun.api.models import Task
-from nailgun.errors import errors
-import nailgun.rpc as rpc
-from nailgun.task.manager import DeploymentTaskManager
 from nailgun.test.base import BaseHandlers
 from nailgun.test.base import fake_tasks
 from nailgun.test.base import reverse
@@ -75,8 +66,8 @@ class TestVerifyNetworkTaskManagers(BaseHandlers):
         self.env.wait_error(task, 30)
 
     @fake_tasks()
-    def test_network_verify_task_manager_with_dhcp_not_on_master(
-        self, macs_mock):
+    def test_network_verify_task_manager_with_dhcp_not_on_master(self,
+                                                                 macs_mock):
         """Testing that task verify_networks will be in error
         if mac of dhcp server not from master node
         """
@@ -104,8 +95,8 @@ class TestVerifyNetworkTaskManagers(BaseHandlers):
         self.env.wait_ready(task, 30)
 
     @fake_tasks(fake_rpc=False)
-    def test_network_verify_fails_if_admin_intersection(
-        self, mocked_rpc, macs_mock):
+    def test_network_verify_fails_if_admin_intersection(self,
+                                                        mocked_rpc, macs_mock):
         macs_mock.return_value = self.master_macs
 
         resp = self.app.get(
@@ -141,7 +132,7 @@ class TestVerifyNetworkTaskManagers(BaseHandlers):
 
         task = self.env.launch_verify_networks()
         self.env.wait_error(task, 30)
-        connectivity_subtask = next((s for s in task.subtasks \
+        connectivity_subtask = next((s for s in task.subtasks
             if s.name == 'verify_network_connectivity'))
         self.assertEqual(connectivity_subtask.status, 'ready')
         self.assertEqual(task.result, connectivity_subtask.result)
