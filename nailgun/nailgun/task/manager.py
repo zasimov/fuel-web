@@ -514,4 +514,3 @@ class DumpTaskManager(TaskManager):
             tasks.DumpTask,
         )
         return task
-
