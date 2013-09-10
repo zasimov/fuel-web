@@ -16,8 +16,8 @@
 
 from copy import deepcopy
 import json
-
 from mock import patch
+
 
 import nailgun
 from nailgun.api.models import IPAddr
@@ -281,6 +281,7 @@ class TestHandlers(BaseHandlers):
         self.assertEquals(len(args), 2)
         self.assertEquals(len(args[1]), 2)
         self.datadiff(args[1][0], provision_msg)
+        self.datadiff(args[1][1], deployment_msg)
 
     @fake_tasks(fake_rpc=False, mock_rpc=False)
     @patch('nailgun.rpc.cast')
