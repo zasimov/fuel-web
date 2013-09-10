@@ -322,8 +322,12 @@ class VerifyNetworksTaskManager(TaskManager):
             name="check_networks",
             cluster=self.cluster
         )
+        if not task.cluster.nodes:
+            task.status = 'error'
+            task.message = 'No nodes for cluster {0}'.format(task.cluster.id)
         db().add(task)
         db().commit()
+
         self._call_silently(
             task,
             tasks.CheckNetworksTask,
