@@ -607,7 +607,7 @@ class NailgunReceiver(object):
         if nodes:
             for node in nodes:
                 if node['status'] == 'ready':
-                    for row in node['data']:
+                    for row in node.get('data', []):
                         if row['mac'] not in macs:
                             messages.append(message_template.format(**row))
                             result[node['uid']].append(row)
