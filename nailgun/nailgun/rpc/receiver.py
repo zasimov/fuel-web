@@ -17,7 +17,6 @@
 import itertools
 import json
 import os
-import types
 import traceback
 
 from sqlalchemy import or_
@@ -767,6 +766,7 @@ class NailgunReceiver(object):
             TaskHelper.update_task_status(task_uuid, status, progress, error)
         elif status == 'ready':
             dumpfile = os.path.basename(msg)
-            notifier.notify('done', 'Snapshot is ready: http://{0}:8080/dump/{1}'
-                ''.format(settings.MASTER_IP, dumpfile))
+            notifier.notify('done', 'Snapshot is ready: '
+                            'http://{0}:8080/dump/{1}'
+                            ''.format(settings.MASTER_IP, dumpfile))
             TaskHelper.update_task_status(task_uuid, status, progress, msg)
