@@ -22,7 +22,6 @@ from dhcp_checker import utils
 from dhcp_checker import vlans_utils
 
 
-
 @utils.multiproc_map
 @utils.single_format
 def check_dhcp_on_eth(iface, timeout):
@@ -87,8 +86,6 @@ def check_dhcp_request(iface, server, range_start, range_end, timeout=5):
     conf.checkIPaddr = False
 
     fam, hw = get_if_raw_hwaddr(iface)
-
-
 
     ip_address = next(utils.pick_ip(range_start, range_end))
 

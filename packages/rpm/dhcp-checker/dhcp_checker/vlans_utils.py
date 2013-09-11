@@ -52,5 +52,10 @@ class VlansActor(net_probe.Actor):
         return self._vlans_str_generator()
 
     def __exit__(self, type, value, trace):
+
+        for iface, vlan in self._iface_vlan_iterator():
+            if vlan > 0:
+                self._ensure_viface_down_and_remove(iface, vlan)
+
         for iface in self._iface_iterator():
             self._ensure_iface_down(iface)
