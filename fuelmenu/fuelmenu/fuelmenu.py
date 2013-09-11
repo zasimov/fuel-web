@@ -61,8 +61,10 @@ class FuelSetup():
         self.footer = None
         self.frame = None
         self.screen = None
-        self.defaultsettingsfile = "settings.yaml"
-        self.settingsfile = "newsettings.yaml"
+        self.defaultsettingsfile = "%s/settings.yaml" \
+                                   % (os.path.dirname(__file__))
+        self.settingsfile = "%s/newsettings.yaml" \
+                            % (os.path.dirname(__file__))
         self.main()
         self.choices = []
 
@@ -162,7 +164,9 @@ class FuelSetup():
 
         #Prepare submodules
         loader = Loader(self)
-        self.children, self.choices = loader.load_modules(module_dir="./modules")
+        self.children, self.choices = loader.load_modules(module_dir="%s/%s" \
+          % (os.path.dirname(__file__),"modules"))
+
         if len(self.children) == 0:
           import sys
           sys.exit(1)
@@ -219,12 +223,8 @@ class FuelSetup():
             self.screen = urwid.raw_display.Screen()
     
         def unhandled(key):
-            log.debug(key)
             if key == 'f8':
                 raise urwid.ExitMainLoop()
-            if key == 'enter' and type(self.mainloop.widget) == urwid.Overlay:
-                log.debug("overlay enter key")
-                self.mainloop.widget = self.frame
     
         self.mainloop= urwid.MainLoop(self.frame, palette, self.screen,
             unhandled_input=unhandled)
