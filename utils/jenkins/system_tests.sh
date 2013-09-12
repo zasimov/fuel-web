@@ -120,7 +120,7 @@ RunTest() {
   dos.py erase "${ENV_NAME}"
 
   # run python test set to create environments, deploy and test product
-  nosetests -w "fuelweb_test" -s -l DEBUG --with-xunit "${1}"
+  nosetests -w "fuelweb_test" -s -l DEBUG --with-xunit "${2}" "${1}"
 
   # remove created environment
   dos.py destroy "${ENV_NAME}"
@@ -134,16 +134,16 @@ RouteTasks() {
 
   case "${TASK_NAME}" in
   admin_node)
-    RunTest "fuelweb_test.integration.test_admin_node"
+    RunTest "fuelweb_test.integration.test_admin_node" "${1}"
     ;;
   node)
-    RunTest "fuelweb_test.integration.test_node:TestNode"
+    RunTest "fuelweb_test.integration.test_node:TestNode" "${1}"
     ;;
   node_ha)
-    RunTest "fuelweb_test.integration.test_node_ha"
+    RunTest "fuelweb_test.integration.test_node_ha" "${1}"
     ;;
   node_ha2)
-    RunTest "fuelweb_test.integration.test_node_ha2"
+    RunTest "fuelweb_test.integration.test_node_ha2" "${1}"
     ;;
   iso)
     MakeISO
@@ -158,4 +158,4 @@ RouteTasks() {
 # MAIN
 CheckVariables
 GlobalPaths
-RouteTasks
+RouteTasks "${1}"
