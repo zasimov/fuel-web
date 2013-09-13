@@ -58,6 +58,7 @@
                         "id": "os",
                         "type": "vg",
                         "min_size": {"generator": "calc_min_os_size"},
+                        "default_size": {"generator": "calc_min_os_size"},
                         "label": "Base System",
                         "volumes": [
                             {
@@ -376,6 +377,7 @@
                         "id": "os",
                         "type": "vg",
                         "min_size": {"generator": "calc_min_os_size"},
+                        "default_size": {"generator": "calc_min_os_size"},
                         "label": "Base System",
                         "volumes": [
                             {
@@ -703,6 +705,7 @@
                         "id": "os",
                         "type": "vg",
                         "min_size": {"generator": "calc_min_os_size"},
+                        "default_size": {"generator": "calc_min_os_size"},
                         "label": "Base System",
                         "volumes": [
                             {

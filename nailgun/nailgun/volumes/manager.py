@@ -697,26 +697,26 @@ class VolumeManager(object):
 
         self.volumes.extend(only_vg(self.allowed_volumes))
 
-        min_size_volumes = []
+        default_size_volumes = []
         fill_volumes = []
         for volume in self.allowed_volumes:
             volume = self.expand_generators(volume)
-            # FIXME(vk): move this condition to volumes_metadata?
-            if volume['id'] == 'os':
-                min_size_volumes.append(volume)
+            self.__logger(volume)
+            if 'default_size' in volume:
+                default_size_volumes.append(volume)
             else:
                 fill_volumes.append(volume)
-        for volume in min_size_volumes:
-            if not fill_volumes and volume == min_size_volumes[-1]:
+        for volume in default_size_volumes:
+            if not fill_volumes and volume == default_size_volumes[-1]:
                 # Always allocate all the space for only/last volume group
                 self._allocate_volumes(volume)
             else:
-                self._allocate_volumes(volume, volume['min_size'])
+                self._allocate_volumes(volume, volume['default_size'])
         if fill_volumes:
             not_allocated_size = sum([d.free_space for d in self.disks])
             fill_volume_size = not_allocated_size / len(fill_volumes)
             for volume in fill_volumes:
-                if volume == min_size_volumes[-1]:
+                if volume == fill_volumes[-1]:
                     size = not_allocated_size
                 else:
                     size = fill_volume_size
