@@ -32,7 +32,6 @@ from nailgun.test.base import BaseHandlers
 from nailgun.test.base import reverse
 
 
-
 class TestVerifyNetworks(BaseHandlers):
 
     def setUp(self):

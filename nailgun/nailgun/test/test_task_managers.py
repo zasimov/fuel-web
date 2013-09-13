@@ -280,8 +280,6 @@ class TestTaskManagers(BaseHandlers):
         supertask = self.env.launch_deployment()
         self.env.wait_error(supertask, 60)
 
-
-
     def test_deletion_empty_cluster_task_manager(self):
         cluster = self.env.create_cluster(api=True)
         resp = self.app.delete(
