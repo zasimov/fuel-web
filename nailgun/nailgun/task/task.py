@@ -554,10 +554,14 @@ class ClusterDeletionTask(object):
 
 class VerifyNetworksTask(object):
 
-    def __init__(self, task_name):
-        self.task_name = task_name
+    @classmethod
+    def _subtask_message(cls, task):
+        for subtask in task.subtasks:
+            yield task.name, 'respond_to': '{0}_resp'.format(subtask.name),
+                             'task_uuid': subtask.uuid}
 
-    def _message(self, task, data):
+    @classmethod
+    def _message(cls, task, data):
         nodes = []
         for n in task.cluster.nodes:
             node_json = {'uid': n.id, 'networks': []}
@@ -580,15 +584,17 @@ class VerifyNetworksTask(object):
                 )
             nodes.append(node_json)
         return {
-            'method': self.task_name,
-            'respond_to': '{0}_resp'.format(self.task_name),
+            'method': task.name,
+            'respond_to': '{0}_resp'.format(task.name),
             'args': {'task_uuid': task.uuid,
-                     'nodes': nodes}}
+                     'nodes': nodes},
+            'subtasks': dict(cls._subtask_message(task))}
 
-    def execute(self, task, data):
-        message = self._message(task, data)
+    @classmethod
+    def execute(cls, task, data):
+        message = cls._message(task, data)
         logger.debug("%s method is called with: %s",
-                     self.task_name, message)
+                     task.name, message)
 
         task.cache = message
         db().add(task)

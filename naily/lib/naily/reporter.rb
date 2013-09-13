@@ -14,10 +14,11 @@
 
 module Naily
   class Reporter
-    def initialize(producer, method, task_uuid)
+    def initialize(producer, method, task_uuid, subtasks={})
       @producer = producer
       @method = method
       @task_uuid = task_uuid
+      @subtasks = subtasks
     end
 
     def report(msg)
@@ -25,6 +26,17 @@ module Naily
       message = {'method' => @method, 'args' => msg_with_task}
       Naily.logger.info "Casting message to fuel: #{message.inspect}"
       @producer.publish(message)
+    end
+
+    def report_to_subtask(subtask_name, msg)
+      if @subtasks[subtask_name] and @subtasks[subtask_name].any?
+        subtask_msg = {'task_uuid'=>@subtasks[subtask_name]['task_uuid']}.merge(msg)
+        message = {'method' => @subtasks[subtask_name]['respond_to'],
+                   'args' => subtask_msg}
+        Naily.logger.info "Casting message to fuel: #{message.inspect}"
+        @producer.publish(message)
+      else:
+        Naily.logger.info "No subtask #{subtask_name} information for : #{@method}"
     end
   end
 end

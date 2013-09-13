@@ -97,14 +97,7 @@ module Naily
 
     def verify_networks(data)
       reporter = Naily::Reporter.new(@producer, data['respond_to'], data['args']['task_uuid'])
-      args = data['args']
       result = @orchestrator.verify_networks(reporter, data['args']['task_uuid'], data['args']['nodes'])
-      report_result(result, reporter)
-    end
-
-    def check_dhcp(data)
-      reporter = Naily::Reporter.new(@producer, data['respond_to'], data['args']['task_uuid'])
-      result = @orchestrator.check_dhcp(reporter, data['args']['task_uuid'], data['args']['nodes'])
       report_result(result, reporter)
     end
 
