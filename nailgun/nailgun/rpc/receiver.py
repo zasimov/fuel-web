@@ -14,11 +14,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import itertools
 import json
-import traceback
 import netifaces
-import collections
+import traceback
+
 
 from sqlalchemy import or_
 

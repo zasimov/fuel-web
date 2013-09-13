@@ -588,7 +588,7 @@ class VerifyNetworksTask(object):
     def execute(self, task, data):
         message = self._message(task, data)
         logger.debug("%s method is called with: %s",
-                    self.task_name, message)
+                     self.task_name, message)
 
         task.cache = message
         db().add(task)

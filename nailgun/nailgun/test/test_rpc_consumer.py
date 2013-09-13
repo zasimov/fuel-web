@@ -15,8 +15,8 @@
 #    under the License.
 
 import json
-import uuid
 from mock import patch
+import uuid
 
 from nailgun.api.models import Attributes
 from nailgun.api.models import Cluster
@@ -30,6 +30,7 @@ from nailgun.api.models import Vlan
 from nailgun.rpc import receiver as rcvr
 from nailgun.test.base import BaseHandlers
 from nailgun.test.base import reverse
+
 
 
 class TestVerifyNetworks(BaseHandlers):
@@ -384,7 +385,7 @@ class TestDhcpCheckTask(BaseHandlers):
         }
 
         with patch('nailgun.rpc.receiver.NailgunReceiver._get_master_macs') \
-            as master_macs:
+                as master_macs:
             master_macs.return_value = [{'addr': 'bc:ae:c5:e0:f5:85'}]
             self.receiver.check_dhcp_resp(**kwargs)
             self.db.refresh(self.task)
@@ -431,7 +432,7 @@ class TestDhcpCheckTask(BaseHandlers):
             'task_uuid': self.task.uuid,
             'status': 'error'
         }
-        with patch.object(self.receiver, '_get_master_macs') as master_macs:
+        with patch.object(self.receiver, '_get_master_macs'):
             self.receiver.check_dhcp_resp(**kwargs)
             self.db.refresh(self.task)
         self.assertEqual(self.task.status, 'error')

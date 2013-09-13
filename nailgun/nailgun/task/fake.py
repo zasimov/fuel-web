@@ -351,7 +351,7 @@ class FakeCheckingDhcpThread(FakeAmpqThread):
                        'iface': 'eth0'}]},
              {'uid': '91',
               'status': 'ready',
-               'data': [{'mac': 'bc:ae:c5:e0:f5:85',
+              'data': [{'mac': 'bc:ae:c5:e0:f5:85',
                         'server_id': '10.20.0.20',
                         'yiaddr': '10.20.0.131',
                         'iface': 'eth0'}]}]

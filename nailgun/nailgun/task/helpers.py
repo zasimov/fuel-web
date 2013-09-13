@@ -145,7 +145,7 @@ class TaskHelper(object):
             cls.update_cluster_status(uuid)
         if task.parent:
             logger.debug("Updating parent task: %s. Result %s.",
-                task.parent.uuid, result)
+                         task.parent.uuid, result)
             result = result if update_parent_result else None
             cls.update_parent_task(task.parent.uuid, result=result)
 
@@ -153,7 +153,7 @@ class TaskHelper(object):
     def update_parent_task(cls, uuid, result=None):
         task = db().query(Task).filter_by(uuid=uuid).first()
         subtasks = task.subtasks
-        if not result is None:
+        if result is not None:
             task.result = result
         if len(subtasks):
             if all(map(lambda s: s.status == 'ready', subtasks)):

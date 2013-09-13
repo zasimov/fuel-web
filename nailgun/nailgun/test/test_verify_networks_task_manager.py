@@ -132,7 +132,7 @@ class TestVerifyNetworkTaskManagers(BaseHandlers):
 
         task = self.env.launch_verify_networks()
         self.env.wait_error(task, 30)
-        connectivity_subtask = next((s for s in task.subtasks
-            if s.name == 'verify_network_connectivity'))
+        connectivity_subtask = next((s for s in task.subtasks if
+                                     s.name == 'verify_network_connectivity'))
         self.assertEqual(connectivity_subtask.status, 'ready')
         self.assertEqual(task.result, connectivity_subtask.result)
