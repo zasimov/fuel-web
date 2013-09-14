@@ -22,7 +22,6 @@ Url:            http://github.com/Mirantis/
 
 Requires: python-cliff-tablib
 Requires: scapy
-Requires: nailgun-net-check
 
 
 %description
