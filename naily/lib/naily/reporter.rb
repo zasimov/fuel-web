@@ -14,11 +14,10 @@
 
 module Naily
   class Reporter
-    def initialize(producer, method, task_uuid, subtasks={})
+    def initialize(producer, method, task_uuid)
       @producer = producer
       @method = method
       @task_uuid = task_uuid
-      @subtasks = subtasks
     end
 
     def report(msg)
@@ -26,6 +25,13 @@ module Naily
       message = {'method' => @method, 'args' => msg_with_task}
       Naily.logger.info "Casting message to fuel: #{message.inspect}"
       @producer.publish(message)
+    end
+  end
+
+  class SubtaskReporter < Reporter
+    def initialize(producer, method, task_uuid, subtasks)
+      super(producer, method, task_uuid)
+      @subtasks = subtasks
     end
 
     def report_to_subtask(subtask_name, msg)
