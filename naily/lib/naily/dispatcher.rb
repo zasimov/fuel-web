@@ -96,7 +96,7 @@ module Naily
     end
 
     def verify_networks(data)
-      reporter = Naily::Reporter.new(@producer, data['respond_to'], data['args']['task_uuid'])
+      reporter = Naily::Reporter.new(@producer, data['respond_to'], data['args']['task_uuid'], data['subtasks'])
       result = @orchestrator.verify_networks(reporter, data['args']['task_uuid'], data['args']['nodes'])
       report_result(result, reporter)
     end

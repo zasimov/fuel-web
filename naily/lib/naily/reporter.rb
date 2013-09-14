@@ -35,8 +35,9 @@ module Naily
                    'args' => subtask_msg}
         Naily.logger.info "Casting message to fuel: #{message.inspect}"
         @producer.publish(message)
-      else:
-        Naily.logger.info "No subtask #{subtask_name} information for : #{@method}"
+      else
+        Naily.logger.info "No subtask #{subtask_name} for : #{@method}"
+      end
     end
   end
 end
