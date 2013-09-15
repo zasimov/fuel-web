@@ -567,8 +567,7 @@ class NailgunReceiver(object):
             logger.error(error_msg)
 
         TaskHelper.update_task_status(task_uuid, status,
-                                      progress, error_msg, result,
-                                      update_parent_result=True)
+                                      progress, error_msg, result)
 
     @classmethod
     def _master_networks_gen(cls, ifaces):

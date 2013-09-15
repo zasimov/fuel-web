@@ -24,7 +24,7 @@ module Naily
   autoload 'Server', 'naily/server'
   autoload 'Producer', 'naily/producer'
   autoload 'Dispatcher', 'naily/dispatcher'
-  autoload 'Reporter', 'naily/reporter'
+  load 'naily/reporter'
 
   def self.logger
     @logger

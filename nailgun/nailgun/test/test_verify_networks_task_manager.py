@@ -57,25 +57,6 @@ class TestVerifyNetworkTaskManagers(BaseHandlers):
         task = self.env.launch_verify_networks()
         self.env.wait_ready(task, 30)
 
-    @fake_tasks(dhcp_error=True)
-    def test_network_verify_task_managers_with_dhcp_erred(self, macs_mock):
-        """Test verifies that when dhcp check erred
-        status of supertask - verify_networks - will be error
-        """
-        task = self.env.launch_verify_networks()
-        self.env.wait_error(task, 30)
-
-    @fake_tasks()
-    def test_network_verify_task_manager_with_dhcp_not_on_master(self,
-                                                                 macs_mock):
-        """Testing that task verify_networks will be in error
-        if mac of dhcp server not from master node
-        """
-        macs_mock.return_value = self.not_master_macs
-
-        task = self.env.launch_verify_networks()
-        self.env.wait_error(task, 30)
-
     @fake_tasks()
     def test_network_verify_compares_received_with_cached(self, macs_mock):
         macs_mock.return_value = self.master_macs
@@ -121,18 +102,3 @@ class TestVerifyNetworkTaskManagers(BaseHandlers):
             )
         )
         self.assertEquals(mocked_rpc.called, False)
-
-    @fake_tasks()
-    def test_verifies_supertask_uses_connectivity_result(self, macs_mock):
-        """Test verifies that supertask will use result from subtask
-        verify_network_connectivity, cause for now UI expecting this result
-        to be used for network result formulation
-        """
-        macs_mock.return_value = self.not_master_macs
-
-        task = self.env.launch_verify_networks()
-        self.env.wait_error(task, 30)
-        connectivity_subtask = next((s for s in task.subtasks if
-                                     s.name == 'verify_network_connectivity'))
-        self.assertEqual(connectivity_subtask.status, 'ready')
-        self.assertEqual(task.result, connectivity_subtask.result)

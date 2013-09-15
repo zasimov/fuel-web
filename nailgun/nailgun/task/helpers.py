@@ -111,8 +111,7 @@ class TaskHelper(object):
         os.system("/usr/bin/pkill -HUP rsyslog")
 
     @classmethod
-    def update_task_status(cls, uuid, status, progress, msg="",
-                           result=None, update_parent_result=False):
+    def update_task_status(cls, uuid, status, progress, msg="", result=None):
         # verify_networks - task is expecting to receive result with
         # some data if connectivity_verification fails
         logger.debug("Updating task: %s", uuid)
@@ -144,17 +143,13 @@ class TaskHelper(object):
                          task.cluster_id, status)
             cls.update_cluster_status(uuid)
         if task.parent:
-            logger.debug("Updating parent task: %s. Result %s.",
-                         task.parent.uuid, result)
-            result = result if update_parent_result else None
-            cls.update_parent_task(task.parent.uuid, result=result)
+            logger.debug("Updating parent task: %s.", task.parent.uuid)
+            cls.update_parent_task(task.parent.uuid)
 
     @classmethod
-    def update_parent_task(cls, uuid, result=None):
+    def update_parent_task(cls, uuid):
         task = db().query(Task).filter_by(uuid=uuid).first()
         subtasks = task.subtasks
-        if result is not None:
-            task.result = result
         if len(subtasks):
             if all(map(lambda s: s.status == 'ready', subtasks)):
                 task.status = 'ready'
