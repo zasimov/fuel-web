@@ -557,7 +557,7 @@ class VerifyNetworksTask(object):
     @classmethod
     def _subtask_message(cls, task):
         for subtask in task.subtasks:
-            yield task.name, {'respond_to': '{0}_resp'.format(subtask.name),
+            yield subtask.name, {'respond_to': '{0}_resp'.format(subtask.name),
                               'task_uuid': subtask.uuid}
 
     @classmethod
