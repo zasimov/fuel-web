@@ -24,7 +24,8 @@ module Naily
   autoload 'Server', 'naily/server'
   autoload 'Producer', 'naily/producer'
   autoload 'Dispatcher', 'naily/dispatcher'
-  load 'naily/reporter'
+  autoload 'Reporter', 'naily/reporter'
+  autoload 'SubtaskReporter', 'naily/reporter'
 
   def self.logger
     @logger
