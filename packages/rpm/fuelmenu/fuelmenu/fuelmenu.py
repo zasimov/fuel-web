@@ -97,7 +97,6 @@ class FuelSetup():
               else:
                 item.set_attr_map({ None: None})
             except Exception, e:
-              self.footer.set_text("%s" % item)
               log.info("%s" % item)
               log.error("%s" % e)
               #continue

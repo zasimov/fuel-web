@@ -203,8 +203,11 @@ IP address")
         puppet.puppetApply(puppetclass,self.activeiface, params)
         self.getNetwork()
         expr='^GATEWAY=.*'
-        replace.replaceInFile("/etc/sysconfig/network",expr,"GATEWAY=%s"
-                          % (self.get_default_gateway_linux()))
+        gateway=self.get_default_gateway_linux()
+        if gateway is None:
+          gateway = ""
+        replace.replaceInFile("/etc/sysconfig/network",expr,"GATEWAY=%s"\
+                               % gateway)
         self.fixEtcHosts()
 
     except Exception, e:

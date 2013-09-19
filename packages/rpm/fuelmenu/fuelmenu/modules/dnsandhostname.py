@@ -33,11 +33,11 @@ DEFAULTS = {
                    "value"  : "8.8.8.8"},
   "DNS_DOMAIN"   : { "label"  : "Domain",
                    "tooltip": "Domain suffix to user for all nodes in your cluster",
-                   "value"  : "example.com"},
+                   "value"  : "domain.tld"},
   "DNS_SEARCH"   : { "label"  : "Search Domain",
                    "tooltip": "Domains to search when looking up DNS\
  (space separated)",
-                   "value"  : "example.com"},
+                   "value"  : "domain.tld"},
   "TEST_DNS"     : { "label" : "Hostname to test DNS:",
                        "value" : "www.google.com",
                        "tooltip": "DNS record to resolve to see if DNS is \
@@ -187,15 +187,29 @@ Releases."
     self.save(responses)
     #Apply hostname
     expr='HOSTNAME=.*'
-    replace.replaceInFile("/etc/sysconfig/network",expr,"HOSTNAME=%s" 
-                          % (responses["HOSTNAME"]))
+    replace.replaceInFile("/etc/sysconfig/network",expr,"HOSTNAME=%s.%s" 
+                          % (responses["HOSTNAME"],responses["DNS_DOMAIN"]))
+    #remove old hostname from /etc/hosts
+    f = open("/etc/hosts","r")
+    lines = f.readlines()
+    f.close()
+    with open("/etc/hosts", "w") as etchosts:
+      lines = etchosts.readlines()
+      for line in lines:
+        if responses["HOSTNAME"] in line or oldsettings["HOSTNAME"] in line:
+          continue
+        else:
+          etchosts.write(line)
+      etchosts.close()
+
     #append hostname and ip address to /etc/hosts
     with open("/etc/hosts", "a") as etchosts:
       if self.netsettings[self.parent.managediface]["addr"] != "":
         managediface_ip = self.netsettings[self.parent.managediface]["addr"]
       else: 
         managediface_ip = "127.0.0.1"
-      etchosts.write("%s   %s" % (responses["HOSTNAME"],managediface_ip))
+      etchosts.write("%s   %s.%s" % (managediface_ip, responses["HOSTNAME"],
+                                     responses['DNS_DOMAIN']))
       etchosts.close()
     #Write dnsmasq upstream server 
     with open('/etc/dnsmasq.upstream','w') as f:
