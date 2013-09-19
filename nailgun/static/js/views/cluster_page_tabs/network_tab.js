@@ -204,11 +204,13 @@ function(utils, models, commonViews, dialogViews, networkTabTemplate, networkTem
         renderNetworks: function() {
             if (this.networkConfiguration.get('networks')) {
                 this.tearDownRegisteredSubViews();
-                this.$('.networks-table').html('');
+                this.$('.networks-table:first').html('');
                 this.networkConfiguration.get('networks').each(function(network) {
-                    var networkView = new Network({network: network, tab: this});
-                    this.registerSubView(networkView);
-                    this.$('.networks-table').append(networkView.render().el);
+                    if (!_.contains(['floating', 'fixed'], network.get('name'))) {
+                        var networkView = new Network({network: network, tab: this});
+                        this.registerSubView(networkView);
+                        this.$('.networks-table:first').append(networkView.render().el);
+                    }
                 }, this);
             }
         },

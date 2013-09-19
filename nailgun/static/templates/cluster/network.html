@@ -21,7 +21,16 @@
     <div class="network-attribute">
     <% var hidden = _.contains(shownAttributes, attribute) ? '' : 'hide' %>
     <% if (attribute == 'ip_ranges') { %>
-      <div class="range-row-header <%= hidden %>">
+      <% if (network.get('name') == 'public') { %>
+      <label class="parameter-box clearfix setting">
+        <div class="networks-sub-title parameter-name">CIDR</div>
+        <div class="parameter-control">
+          <input type="text" name="" value="10.0.0.2/27" <%= disabled %> />
+        </div>
+        <div class="error"><span class="help-inline"></span></div>
+      </label>
+      <% } else { %>
+        <div class="range-row-header <%= hidden %>">
         <div>Start</div><div>End</div>
       </div>
       <div class="networks-sub-title parameter-name range-name <%= hidden %>"><%= labels[attribute] %></div>
@@ -46,7 +55,9 @@
           <div class="error"><span class="help-inline"></span></div>
         </div>
       <% }) %>
+      <% } %>
     <% } else if (_.contains(['netmask', 'gateway', 'cidr', 'amount'], attribute)) { %>
+      <% if (!(network.get('name') == 'public' && attribute == 'netmask')) { %>
         <label class="parameter-box clearfix setting <%= hidden %> <%= vlanManager && attribute == 'amount' ? 'hide' : '' %>">
           <div class="networks-sub-title parameter-name"><%= labels[attribute] %></div>
           <div class="parameter-control <%- attribute %>">
@@ -54,6 +65,7 @@
           </div>
           <div class="error"><span class="help-inline"></span></div>
         </label>
+      <% } %>
     <% } else if (attribute == 'vlan_start') { %>
       <% if (networkName == 'fixed' && !vlanManager) { %>
         <div class="range-row-header mini <%= hidden %>">
