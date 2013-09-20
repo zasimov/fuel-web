@@ -121,7 +121,7 @@ fcgiwrap-1.0.3-2
 fence-agents-3.1.5-25.el6_4.2
 flex-2.5.35-8.el6
 fuse-libs-2.8.3-4.el6
-galera-23.2.2-mira.5
+galera-23.2.2-mira.6
 gcc-4.4.7-3.el6
 gcc-c++-4.4.7-3.el6
 gdisk-0.8.4-1.el6
@@ -355,7 +355,7 @@ python-paste-deploy1.5-1.5.0-5.el6
 python-pbr-0.5.21-mira.2
 python-pip-0.8-1.el6
 python-prettytable-0.6.1-1.el6
-python-pushy-0.5.1-6.1
+python-pushy-0.5.3-mira.1
 python-py-1.4.15-1.el6
 python-pygments-1.1.1-1.el6
 python-pyudev-0.15-1.el6
