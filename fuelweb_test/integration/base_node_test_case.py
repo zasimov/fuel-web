@@ -455,6 +455,20 @@ class BaseNodeTestCase(BaseTestCase):
             net_manager=NETWORK_MANAGERS['vlan'])
 
     @logwrap
+    def update_gre_network_fixed(
+            self, cluster_id, amount=1, network_size=256):
+        network_list = self.client.get_networks(cluster_id)['networks']
+        for network in network_list:
+            if network["name"] == 'fixed':
+                network['amount'] = amount
+                network['network_size'] = network_size
+
+        self.client.update_network(
+            cluster_id,
+            networks=network_list,
+            net_manager=NETWORK_MANAGERS['gre'])
+
+    @logwrap
     def get_empty_environment(self):
         if not(self.ci().get_empty_state()):
             self.ci().setup_environment()

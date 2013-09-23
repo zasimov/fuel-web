@@ -67,6 +67,27 @@ POOLS = {
                           DEFAULT_POOLS.get('nat')).split(':'),
 }
 
+NETWORK_TYPES = {
+    #todo: !!!values are undefined currently, need  to be specified!!!
+    #todo: refactor when the real values will be availalbe
+    'nova': 'novanetwork',
+    'neutron'   : 'ovs'
+}
+
+NEUTRON_SEGMENTATION_TYPES = {
+    #todo: values from doc https://docs.google.com/a/mirantis.com/document/d/1-GCoxHeHrm-E329DgK8U2n4EYN9uW2q8RjnwCf2Zb90/edit?usp=sharing
+    #todo: refactor when the real values will be availalbe
+    'vlan'  : 'gre',
+    'gre'   : {'name' : 'gre',
+               'enable_tunneling': 'true',
+               'tunnel_range': '1:65534',
+               'tunnel_bridge' : 'br_tun',
+               'local_ip' : '10.108.0.254'
+    }, #gre
+    'lisp'  : 'lisp',
+    'vxlan' : 'vxlan'
+}
+
 NETWORK_MANAGERS = {
     'flat': 'FlatDHCPManager',
     'vlan': 'VlanManager'
