@@ -66,11 +66,14 @@ class dnsandhostname(urwid.WidgetWrap):
     #check upstream dns server 
     with open('/etc/dnsmasq.upstream','r') as f:
       dnslines=f.readlines()
-    f.close() 
-    nameservers=dnslines[0].split(" ")[1:]
-    for nameserver in nameservers:
-      if not self.checkDNS(nameserver):
-        nameservers.remove(nameserver)
+    f.close()
+    if len(dnslines) > 0:
+        nameservers=dnslines[0].split(" ")[1:]
+        for nameserver in nameservers:
+            if not self.checkDNS(nameserver):
+                nameservers.remove(nameserver)
+    else:
+        nameservers = []
     if nameservers == []:
       #Write dnsmasq upstream server to default if it's not readable
       with open('/etc/dnsmasq.upstream','w') as f:
