@@ -384,7 +384,7 @@ class interfaces(urwid.WidgetWrap):
                 if network.inSameSubnet(
                         self.netsettings[self.activeiface]['addr'],
                         self.gateway,
-                        self.netsettings[self.activeiface]['netmask ']):
+                        self.netsettings[self.activeiface]['netmask']):
                     self.edits[index].set_edit_text(self.gateway)
                 else:
                     self.edits[index].set_edit_text("")
