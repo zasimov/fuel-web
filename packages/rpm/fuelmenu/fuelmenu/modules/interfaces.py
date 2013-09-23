@@ -336,7 +336,6 @@ class interfaces(urwid.WidgetWrap):
                 else:
                     self.extdhcp = False
                 break
-        self.setExtIfaceFields(self.extdhcp)
         return
 
     def setNetworkDetails(self):
