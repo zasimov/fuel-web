@@ -156,10 +156,9 @@ class interfaces(urwid.WidgetWrap):
          errors.append("Not a valid netmask: %s" % responses["netmask"])
        try:
          if len(responses["gateway"]) > 0:
-           gateway=netaddr.IPAddress(responses["netmask"])
            #Check if gateway is valid
-           if gateway.valid_ipv4 is False:
-             raise Exception("Gateway IP address is not valid")
+           if netaddr.valid_ipv4(responses["gateway"]) is False:
+               raise Exception("Gateway IP address is not valid")
            #Check if gateway is in same subnet
            if network.inSameSubnet(responses["ipaddr"],responses["gateway"],
                                    responses["netmask"]) is False:
