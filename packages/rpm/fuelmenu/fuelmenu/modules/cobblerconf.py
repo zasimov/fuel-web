@@ -241,11 +241,11 @@ interface first.")
             log.error("%s" % (responses))
             return False
 
-    #Always save even if "post"
-    self.save(responses)
-    #Need to decide if we are pre-deployment or post-deployment
-    if self.deployment == "post":
-      self.updateCobbler(responses)
+        #Always save even if "post"
+        self.save(responses)
+        #Need to decide if we are pre-deployment or post-deployment
+        if self.deployment == "post":
+            self.updateCobbler(responses)
 
 
     def updateCobbler(self, params):  
@@ -415,7 +415,8 @@ interface first.")
       self.getNetwork()
       self.setNetworkDetails()
       return 
-  
+
+
     def radioSelectExtIf(self, current, state, user_data=None):
       """Update network details and display information"""
       ### This makes no sense, but urwid returns the previous object.
@@ -432,8 +433,9 @@ interface first.")
              self.extdhcp=False
            break
       self.setExtIfaceFields(self.extdhcp)
-      return 
-  
+      return
+
+
     def setNetworkDetails(self):
       #condensed mode:
       self.net_text1.set_text("Interface: %-13s  Link: %s" % (self.activeiface, self.netsettings[self.activeiface]['link'].upper()))
@@ -452,7 +454,7 @@ interface first.")
            self.net_text4.set_text("")
       else:
         self.net_text4.set_text("WARNING: This interface is DOWN. Configure it first.")
-    
+
       #Calculate and set Static/DHCP pool fields
       #Max IPs = net size - 2 (master node + bcast)
       net_ip_list = network.getNetwork(self.netsettings[self.activeiface]['addr'],
@@ -483,11 +485,8 @@ interface first.")
           self.edits[index].set_edit_text(dynamic_start)
         elif key == "ADMIN_NETWORK/last":
           self.edits[index].set_edit_text(dynamic_end)
-     
-  
-    #def setExtIfaceFields(self, enabled=True):
-    #  ###TODO: Define ext iface fields as disabled and then toggle
-    #  pass
+
+
     def refresh(self):
       self.getNetwork()
       self.setNetworkDetails()
@@ -504,7 +503,7 @@ interface first.")
       self.net_choices = ChoicesGroup(self, sorted(self.netsettings.keys()),
                                       default_value=self.activeiface, 
                                       fn=self.radioSelectIface)
-  
+
       self.edits = []
       toolbar = self.parent.footer
       for key in fields:
@@ -524,36 +523,34 @@ interface first.")
            default = DEFAULTS[key]["value"]
            tooltip = DEFAULTS[key]["tooltip"]
            self.edits.append(TextField(key, caption, 23, default, tooltip, toolbar))
-  
-  
+
       #Button to check
       button_check = Button("Check", self.check)
       #Button to revert to previously saved settings
       button_cancel = Button("Cancel", self.cancel)
       #Button to apply (and check again)
       button_apply = Button("Apply", self.apply)
-  
+
       #Wrap buttons into Columns so it doesn't expand and look ugly
       check_col = Columns([button_check, button_cancel,
                            button_apply,('weight',2,blank)])
-  
+
       self.listbox_content = [text1, blank, text2]
-      self.listbox_content.extend([self.net_choices, self.net_text1, 
-                                   self.net_text2, self.net_text3, 
+      self.listbox_content.extend([self.net_choices, self.net_text1,
+                                   self.net_text2, self.net_text3,
                                    self.net_text4, blank])
       self.listbox_content.extend(self.edits)
-      self.listbox_content.append(blank)   
-      self.listbox_content.append(check_col)   
-  
-      #Add listeners 
-      
+      self.listbox_content.append(blank)
+      self.listbox_content.append(check_col)
+
+      #Add listeners
+
       #Build all of these into a list
       #self.listbox_content = [ text1, blank, blank, edit1, edit2, \
       #                    edit3, edit4, edit5, edit6, button_check ]
       self.setNetworkDetails()
-     
+
       #Add everything into a ListBox and return it
       self.listwalker=urwid.SimpleListWalker(self.listbox_content)
       screen = urwid.ListBox(self.listwalker)
       return screen
-  
