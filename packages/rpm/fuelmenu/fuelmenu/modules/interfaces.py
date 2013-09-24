@@ -11,6 +11,7 @@ import struct
 import re
 import netaddr
 import netifaces
+import dhcp_checker.api
 from fuelmenu.settings import *
 from fuelmenu.common import network, puppet, replace, dialog
 from fuelmenu.common.urwidwrapper import *
