@@ -131,7 +131,7 @@ class interfaces(urwid.WidgetWrap):
         if responses["bootproto"] == "dhcp":
             self.parent.footer.set_text("Scanning for DHCP servers. "
                                         "Please wait...")
-            self.parent.refreshScreen()i
+            self.parent.refreshScreen()
             dhcp_server_data = dhcp_checker.api.check_dhcp_on_eth(
                 self.activeiface, timeout=3)
             if len(dhcp_server_data) < 1:
