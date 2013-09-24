@@ -169,14 +169,30 @@ class ClusterCollectionHandler(JSONHandler):
                * 409 (cluster with such parameters already exists)
         """
         # It's used for cluster creating only.
+
+        def attrs_copy(fields):
+            for field in fields:
+                attr_copy(field)
+
+        def attr_copy(field):
+            if hasattr(cluster, field) and data.get(field):
+                setattr(cluster, field, data.get(field))
+                return data.get(field)
+            return None
+
         data = self.checked_data()
 
         cluster = Cluster()
         cluster.release = db().query(Release).get(data["release"])
         # TODO(NAME): use fields
-        for field in ('name', 'mode', 'net_manager'):
-            if data.get(field):
-                setattr(cluster, field, data.get(field))
+        attrs_copy(['name', 'mode'])
+        net_provider = attr_copy('net_provider')
+        if net_provider not in Cluster.NET_PROVIDERS:
+            raise web.badrequest('Undefined network provider')
+        if net_provider == Cluster.NET_PROVIDERS.NovaNet:
+            attr_copy('net_manager')
+        else:
+            attrs_copy(['net_l23_provider', 'net_segment_type'])
         db().add(cluster)
         db().commit()
         attributes = Attributes(
@@ -186,7 +202,7 @@ class ClusterCollectionHandler(JSONHandler):
         )
         attributes.generate_fields()
 
-        netmanager = NetworkManager()
+        netmanager = cluster.get_network_manager()
         try:
             netmanager.create_network_groups(cluster.id)
 

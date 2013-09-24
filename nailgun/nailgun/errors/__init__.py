@@ -47,6 +47,7 @@ default_messages = {
     "AssignIPError": "Failed to assign IP to node",
     "NetworkCheckError": "Network checking failed",
     "OutOfVLANs": "Not enough available VLAN IDs",
+    "OutOfSegIds": "Not enough available segmentation IDs",
     "OutOfIPs": "Not enough free IP addresses in pool",
     "NoSuitableCIDR": "Cannot find suitable CIDR",
     "CanNotFindInterface": "Cannot find interface",

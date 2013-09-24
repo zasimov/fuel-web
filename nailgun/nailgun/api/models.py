@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from collections import namedtuple
 from copy import deepcopy
 from random import choice
 import string
@@ -40,6 +41,10 @@ from nailgun.volumes.manager import VolumeManager
 
 
 Base = declarative_base()
+
+
+def enum(*values):
+    return namedtuple('Enum', values)(*values)
 
 
 class NodeRoles(Base):
@@ -125,51 +130,53 @@ class ClusterChanges(Base):
 
 class Cluster(Base):
     __tablename__ = 'clusters'
-    MODES = ('multinode', 'ha_full', 'ha_compact')
-    STATUSES = ('new', 'deployment', 'operational', 'error', 'remove')
-    NET_MANAGERS = ('FlatDHCPManager', 'VlanManager')
-    GROUPING = ('roles', 'hardware', 'both')
-    NET_PROVIDERS = ('NovaNet', 'Neutron')
-    NET_L23_PROVIDERS = ('OVS')
-    NET_SEGMENT_TYPES = ('vlan', 'gre')
+    MODES = enum('multinode', 'ha_full', 'ha_compact')
+    STATUSES = enum('new', 'deployment', 'operational', 'error', 'remove')
+    NET_MANAGERS = enum('FlatDHCPManager', 'VlanManager')
+    GROUPING = enum('roles', 'hardware', 'both')
+    NET_PROVIDERS = enum('NovaNet', 'Neutron')
+    NET_L23_PROVIDERS = enum('OVS')
+    NET_SEGMENT_TYPES = enum('none', 'vlan', 'gre')
     id = Column(Integer, primary_key=True)
     mode = Column(
-        Enum(*MODES, name='cluster_mode'),
+        Enum(*MODES._asdict().values(), name='cluster_mode'),
         nullable=False,
-        default='multinode'
+        default=MODES.multinode
     )
     status = Column(
-        Enum(*STATUSES, name='cluster_status'),
+        Enum(*STATUSES._asdict().values(), name='cluster_status'),
         nullable=False,
-        default='new'
+        default=STATUSES.new
     )
     net_provider = Column(
-        Enum(*NET_PROVIDERS, name='net_provider'),
+        Enum(*NET_PROVIDERS._asdict().values(), name='net_provider'),
         nullable=False,
-        default=NET_PROVIDERS[0]
+        default=NET_PROVIDERS.NovaNet
     )
     net_l23_provider = Column(
-        Enum(*NET_L23_PROVIDERS, name='net_l23_provider'),
+        Enum(*NET_L23_PROVIDERS._asdict().values(), name='net_l23_provider'),
         nullable=False,
-        default=NET_L23_PROVIDERS[0]
+        default=NET_L23_PROVIDERS.OVS
     )
     net_segment_type = Column(
-        Enum(*NET_SEGMENT_TYPES, name='net_segment_type'),
+        Enum(*NET_SEGMENT_TYPES._asdict().values(), name='net_segment_type'),
         nullable=False,
-        default=NET_SEGMENT_TYPES[0]
+        default=NET_SEGMENT_TYPES.vlan
     )
     net_manager = Column(
-        Enum(*NET_MANAGERS, name='cluster_net_manager'),
+        Enum(*NET_MANAGERS._asdict().values(), name='cluster_net_manager'),
         nullable=False,
-        default='FlatDHCPManager'
+        default=NET_MANAGERS.FlatDHCPManager
     )
     grouping = Column(
-        Enum(*GROUPING, name='cluster_grouping'),
+        Enum(*GROUPING._asdict().values(), name='cluster_grouping'),
         nullable=False,
-        default='roles'
+        default=GROUPING.roles
     )
     name = Column(Unicode(50), unique=True, nullable=False)
     release_id = Column(Integer, ForeignKey('releases.id'), nullable=False)
+    neutron_cfg_id = Column(Integer, ForeignKey('neutron_configuration.id'),
+                            nullable=False)
     nodes = relationship("Node", backref="cluster", cascade="delete")
     tasks = relationship("Task", backref="cluster", cascade="delete")
     attributes = relationship("Attributes", uselist=False,
@@ -211,6 +218,14 @@ class Cluster(Base):
             if not release:
                 raise web.webapi.badrequest(message="Invalid release id")
         return d
+
+    @property
+    def network_manager(self):
+        if self.net_provider == Cluster.NET_PROVIDERS.NovaNet:
+            from nailgun.network.manager import NovaNetworkManager
+            return NovaNetworkManager
+        from nailgun.network.manager import NetworkManager
+        return NetworkManager
 
     def add_pending_changes(self, changes_type, node_id=None):
         ex_chs = db().query(ClusterChanges).filter_by(
@@ -451,6 +466,13 @@ class Vlan(Base):
                            backref=backref("vlan"))
 
 
+class NetworkSegmentId(Base):
+    __tablename__ = 'network_segment_id'
+    id = Column(Integer, primary_key=True)
+    network = relationship("Network",
+                           backref=backref("network_segment_id"))
+
+
 class Network(Base):
     __tablename__ = 'networks'
     id = Column(Integer, primary_key=True)
@@ -458,6 +480,7 @@ class Network(Base):
     release = Column(Integer, ForeignKey('releases.id'))
     name = Column(Unicode(100), nullable=False)
     vlan_id = Column(Integer, ForeignKey('vlan.id'))
+    seg_id = Column(Integer)#, ForeignKey('vlan.id'))
     network_group_id = Column(Integer, ForeignKey('network_groups.id'))
     cidr = Column(String(25), nullable=False)
     gateway = Column(String(25))
@@ -494,6 +517,8 @@ class NetworkGroup(Base):
     network_size = Column(Integer, default=256)
     amount = Column(Integer, default=1)
     vlan_start = Column(Integer, default=1)
+    gre_id_first = Column(Integer, default=1)
+    gre_id_last = Column(Integer, default=1)
     networks = relationship("Network", cascade="delete",
                             backref="network_group")
     cidr = Column(String(25))
@@ -516,6 +541,11 @@ class NetworkGroup(Base):
             )
         ]
         return vlans
+
+    @property
+    def segmentation_type(self):
+        cluster = db().query(Cluster).filter_by(id=self.cluster_id).first()
+        return cluster.net_segment_type
 
 
 class NetworkConfiguration(object):
