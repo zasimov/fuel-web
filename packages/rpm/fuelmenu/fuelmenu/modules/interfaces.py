@@ -155,7 +155,7 @@ class interfaces(urwid.WidgetWrap):
                     responses["dhcp_nowait"] = True
             except:
                 self.log.warning("dhcp_checker failed to check on %s"
-                                 % activeiface)
+                                 % self.activeiface)
                 #TODO: Fix set up DHCP on down iface
                 responses["dhcp_nowait"] = False
         #Check ipaddr, netmask, gateway only if static
@@ -218,7 +218,8 @@ class interfaces(urwid.WidgetWrap):
                 params = {"ipaddr": "dhcp"}
         else:
             params = {"ipaddr": responses["ipaddr"],
-                      "netmask": responses["netmask"]}
+                      "netmask": responses["netmask"],
+                      "check_by_ping": "none"]}
         if len(responses["gateway"]) > 1:
             params["gateway"] = responses["gateway"]
         self.log.info("Puppet data: %s %s %s" % (
