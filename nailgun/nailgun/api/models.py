@@ -158,8 +158,9 @@ class Cluster(Base):
         nullable=False,
         default=NET_L23_PROVIDERS.OVS
     )
-    net_segment_type = Column(
-        Enum(*NET_SEGMENT_TYPES._asdict().values(), name='net_segment_type'),
+    net_segmentation_type = Column(
+        Enum(*NET_SEGMENT_TYPES._asdict().values(),
+             name='net_segmentation_type'),
         nullable=False,
         default=NET_SEGMENT_TYPES.vlan
     )
@@ -224,8 +225,8 @@ class Cluster(Base):
         if self.net_provider == Cluster.NET_PROVIDERS.NovaNet:
             from nailgun.network.manager import NovaNetworkManager
             return NovaNetworkManager
-        from nailgun.network.manager import NetworkManager
-        return NetworkManager
+        from nailgun.network.manager import NeutronNetworkManager
+        return NeutronNetworkManager
 
     def add_pending_changes(self, changes_type, node_id=None):
         ex_chs = db().query(ClusterChanges).filter_by(
@@ -517,8 +518,8 @@ class NetworkGroup(Base):
     network_size = Column(Integer, default=256)
     amount = Column(Integer, default=1)
     vlan_start = Column(Integer, default=1)
-    gre_id_first = Column(Integer, default=1)
-    gre_id_last = Column(Integer, default=1)
+    seg_id_first = Column(Integer, default=1)
+    seg_id_last = Column(Integer, default=1)
     networks = relationship("Network", cascade="delete",
                             backref="network_group")
     cidr = Column(String(25))
@@ -545,7 +546,7 @@ class NetworkGroup(Base):
     @property
     def segmentation_type(self):
         cluster = db().query(Cluster).filter_by(id=self.cluster_id).first()
-        return cluster.net_segment_type
+        return cluster.net_segmentation_type
 
 
 class NetworkConfiguration(object):

@@ -5,6 +5,7 @@
         "fields": {
         	"parameters": {
                 "vlan_range": [100, 1000],
+                "seg_id_range": [2999, 4094],
                 "net_exclude": "10.20.0.0/24"
         	}
         }

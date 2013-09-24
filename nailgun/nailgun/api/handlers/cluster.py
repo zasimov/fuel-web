@@ -202,9 +202,9 @@ class ClusterCollectionHandler(JSONHandler):
         )
         attributes.generate_fields()
 
-        netmanager = cluster.get_network_manager()
+        net_manager = cluster.get_network_manager()
         try:
-            netmanager.create_network_groups(cluster.id)
+            net_manager.create_network_groups(cluster.id)
 
             cluster.add_pending_changes("attributes")
             cluster.add_pending_changes("networks")
@@ -216,10 +216,10 @@ class ClusterCollectionHandler(JSONHandler):
                 map(cluster.nodes.append, nodes)
                 db().commit()
                 for node in nodes:
-                    netmanager.allow_network_assignment_to_all_interfaces(
+                    net_manager.allow_network_assignment_to_all_interfaces(
                         node.id
                     )
-                    netmanager.assign_networks_to_main_interface(node.id)
+                    net_manager.assign_networks_to_main_interface(node.id)
 
             raise web.webapi.created(json.dumps(
                 ClusterHandler.render(cluster),

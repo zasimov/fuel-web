@@ -36,6 +36,7 @@ from nailgun.api.models import NetworkGroup
 from nailgun.api.models import Node
 from nailgun.api.models import NodeNICInterface
 from nailgun.api.models import Vlan
+from nailgun.api.models import NetworkSegmentId
 from nailgun.db import db
 from nailgun.errors import errors
 from nailgun.logger import logger
@@ -121,6 +122,250 @@ class NetworkManager(object):
         if not admin_ng and fail_if_not_found:
             raise errors.AdminNetworkNotFound()
         return admin_ng
+
+    def allow_network_assignment_to_all_interfaces(self, node_id):
+        """Method adds all network groups from cluster
+        to allowed_networks list for all interfaces
+        of specified node.
+
+        :param node: Node object.
+        :type  node: Node
+        """
+        node_db = db().query(Node).get(node_id)
+        for nic in node_db.interfaces:
+            for net_group_id in self.get_cluster_networkgroups_by_node(
+                    node_id
+            ):
+                ng_db = db().query(NetworkGroup).get(net_group_id)
+                nic.allowed_networks.append(ng_db)
+        db().commit()
+
+    def assign_networks_to_main_interface(self, node_id):
+        self.clear_assigned_networks(node_id)
+        main_nic_id = self.get_main_nic(node_id)
+        if main_nic_id:
+            main_nic = db().query(NodeNICInterface).get(main_nic_id)
+            for net_group_id in self.get_cluster_networkgroups_by_node(
+                    node_id
+            ):
+                ng_db = db().query(NetworkGroup).get(net_group_id)
+                main_nic.assigned_networks.append(ng_db)
+            db().commit()
+
+    def get_cluster_networkgroups_by_node(self, node_id):
+        """Method for receiving cluster network groups by node.
+
+        :param node: Node object.
+        :type  node: Node
+        :returns: List of network groups for cluster node belongs to.
+        """
+        node_db = db().query(Node).get(node_id)
+        if node_db.cluster:
+            return [ng.id for ng in node_db.cluster.network_groups]
+        return []
+
+    def get_main_nic(self, node_id):
+        node_db = db().query(Node).get(node_id)
+        for nic in node_db.interfaces:
+            if node_db.mac == nic.mac:
+                return nic.id
+            # we need at least one interface here - so let's
+        # take the first one
+        if node_db.interfaces:
+            return node_db.interfaces[0].id
+
+    def clear_all_allowed_networks(self, node_id):
+        node_db = db().query(Node).get(node_id)
+        for nic in node_db.interfaces:
+            while nic.allowed_networks:
+                nic.allowed_networks.pop()
+        db().commit()
+
+    def clear_assigned_networks(self, node_id):
+        node_db = db().query(Node).get(node_id)
+        for nic in node_db.interfaces:
+            while nic.assigned_networks:
+                nic.assigned_networks.pop()
+        db().commit()
+
+
+class NeutronNetworkManager(NetworkManager):
+
+    def create_network_groups(self, cluster_id):
+        '''Method for creation of network groups for cluster.
+
+        :param cluster_id: Cluster database ID.
+        :type  cluster_id: int
+        :returns: None
+        :raises: errors.OutOfSegIds, errors.OutOfIPs,
+        errors.NoSuitableCIDR
+        '''
+        used_nets = []
+        used_seg_ids = []
+
+        global_params = db().query(GlobalParameters).first()
+
+        cluster_db = db().query(Cluster).get(cluster_id)
+
+        networks_metadata = cluster_db.release.networks_metadata
+
+        admin_network_range = db().query(IPAddrRange).filter_by(
+            network_group_id=self.get_admin_network_group_id()
+        ).all()[0]
+
+        use_segmentation = cluster_db.net_segmentation_type in (
+            Cluster.NET_SEGMENT_TYPES.vlan,
+            Cluster.NET_SEGMENT_TYPES.gre)
+
+        def _free_seg_id():
+            free_seg_ids = set(
+                range(
+                    # may use different ranges for different segmentation types
+                    *global_params.parameters["seg_id_range"]
+                )
+            ) - set(used_seg_ids)
+            if not free_seg_ids:
+                raise errors.OutOfSegIds()
+            return min(free_seg_ids)
+
+        for network in networks_metadata:
+            seg_id_start = _free_seg_id()
+
+            logger.debug("Found free vlan: %s", seg_id_start)
+            pool = network.get('pool')
+            if not pool:
+                raise errors.InvalidNetworkAccess(
+                    u"Invalid access '{0}' for network '{1}'".format(
+                        network['access'],
+                        network['name']
+                    )
+                )
+            nets_free_set = IPSet(pool) - \
+                            IPSet(
+                                IPNetwork(global_params.parameters["net_exclude"])
+                            ) - \
+                            IPSet(
+                                IPRange(
+                                    admin_network_range.first,
+                                    admin_network_range.last
+                                )
+                            ) - \
+                            IPSet(used_nets)
+            if not nets_free_set:
+                raise errors.OutOfIPs()
+
+            free_cidrs = sorted(list(nets_free_set._cidrs))
+            new_net = None
+            for fcidr in free_cidrs:
+                for n in fcidr.subnet(24, count=1):
+                    new_net = n
+                    break
+                if new_net:
+                    break
+            if not new_net:
+                raise errors.NoSuitableCIDR()
+
+            new_ip_range = IPAddrRange(
+                first=str(new_net[2]),
+                last=str(new_net[-2])
+            )
+
+            nw_group = NetworkGroup(
+                release=cluster_db.release.id,
+                name=network['name'],
+                access=network['access'],
+                cidr=str(new_net),
+                netmask=str(new_net.netmask),
+                gateway=str(new_net[1]),
+                cluster_id=cluster_id,
+                amount=1
+            )
+            if use_segmentation:
+                nw_group.seg_id_first = seg_id_start
+                nw_group.seg_id_last = seg_id_start
+            db().add(nw_group)
+            db().commit()
+            nw_group.ip_ranges.append(new_ip_range)
+            db().commit()
+            self.create_networks(nw_group)
+
+            used_seg_ids.append(seg_id_start)
+            used_nets.append(str(new_net))
+
+    def create_networks(self, nw_group):
+        '''Method for creation of networks for network group.
+
+        :param nw_group: NetworkGroup object.
+        :type  nw_group: NetworkGroup
+        :returns: None
+        '''
+        use_segmentation = nw_group.segmentation_type in (
+            Cluster.NET_SEGMENT_TYPES.vlan,
+            Cluster.NET_SEGMENT_TYPES.gre)
+        fixnet = IPNetwork(nw_group.cidr)
+        subnet_bits = int(math.ceil(math.log(nw_group.network_size, 2)))
+        logger.debug("Specified network size requires %s bits", subnet_bits)
+        subnets = list(fixnet.subnet(32 - subnet_bits,
+                                     count=nw_group.amount))
+        logger.debug("Base CIDR sliced on subnets: %s", subnets)
+
+        for net in nw_group.networks:
+            logger.debug("Deleting old network with id=%s, cidr=%s",
+                         net.id, net.cidr)
+            ips = db().query(IPAddr).filter(
+                IPAddr.network == net.id
+            ).all()
+            map(db().delete, ips)
+            db().delete(net)
+            db().commit()
+
+        self.clear_segment_ids()
+        db().commit()
+        nw_group.networks = []
+        net_amount = min(nw_group.amount,
+                         (nw_group.seg_id_last - nw_group.seg_id_first + 1)
+                         if use_segmentation else nw_group.amount)
+
+        for n in xrange(net_amount):
+            seg_id = None
+            if use_segmentation:
+                seg_id_db = db().query(NetworkSegmentId).get(
+                    nw_group.seg_id_first + n)
+                if seg_id_db:
+                    logger.warning("Intersection with existing seg_id: %s",
+                                   seg_id_db.id)
+                else:
+                    seg_id_db = NetworkSegmentId(id=nw_group.seg_id_first + n)
+                    db().add(seg_id_db)
+                    logger.debug("Created NetworkSegmentId object, seg_id=%s",
+                                 seg_id)
+                seg_id = seg_id_db.id
+            gateway = None
+            if nw_group.gateway:
+                gateway = nw_group.gateway
+            net_db = Network(
+                release=nw_group.release,
+                name=nw_group.name,
+                cidr=str(subnets[n]),
+                seg_id=seg_id,
+                gateway=gateway,
+                network_group_id=nw_group.id)
+            db().add(net_db)
+        db().commit()
+
+    def clear_segment_ids(self):
+        """
+        Removes from DB all segmentation id records
+        having no Networks assigned to them.
+        """
+        map(
+            db().delete,
+            db().query(NetworkSegmentId).filter_by(network=None)
+        )
+        db().commit()
+
+
+class NovaNetworkManager(NetworkManager):
 
     def create_network_groups(self, cluster_id):
         '''Method for creation of network groups for cluster.
@@ -567,71 +812,6 @@ class NetworkManager(object):
             )
 
         return ips.all()
-
-    def get_main_nic(self, node_id):
-        node_db = db().query(Node).get(node_id)
-        for nic in node_db.interfaces:
-            if node_db.mac == nic.mac:
-                return nic.id
-        # we need at least one interface here - so let's
-        # take the first one
-        if node_db.interfaces:
-            return node_db.interfaces[0].id
-
-    def clear_all_allowed_networks(self, node_id):
-        node_db = db().query(Node).get(node_id)
-        for nic in node_db.interfaces:
-            while nic.allowed_networks:
-                nic.allowed_networks.pop()
-        db().commit()
-
-    def clear_assigned_networks(self, node_id):
-        node_db = db().query(Node).get(node_id)
-        for nic in node_db.interfaces:
-            while nic.assigned_networks:
-                nic.assigned_networks.pop()
-        db().commit()
-
-    def get_cluster_networkgroups_by_node(self, node_id):
-        """Method for receiving cluster network groups by node.
-
-        :param node: Node object.
-        :type  node: Node
-        :returns: List of network groups for cluster node belongs to.
-        """
-        node_db = db().query(Node).get(node_id)
-        if node_db.cluster:
-            return [ng.id for ng in node_db.cluster.network_groups]
-        return []
-
-    def allow_network_assignment_to_all_interfaces(self, node_id):
-        """Method adds all network groups from cluster
-        to allowed_networks list for all interfaces
-        of specified node.
-
-        :param node: Node object.
-        :type  node: Node
-        """
-        node_db = db().query(Node).get(node_id)
-        for nic in node_db.interfaces:
-            for net_group_id in self.get_cluster_networkgroups_by_node(
-                node_id
-            ):
-                ng_db = db().query(NetworkGroup).get(net_group_id)
-                nic.allowed_networks.append(ng_db)
-        db().commit()
-
-    def assign_networks_to_main_interface(self, node_id):
-        self.clear_assigned_networks(node_id)
-        main_nic_id = self.get_main_nic(node_id)
-        if main_nic_id:
-            main_nic = db().query(NodeNICInterface).get(main_nic_id)
-            for net_group_id in self.get_cluster_networkgroups_by_node(
-                node_id
-            ):
-                ng_db = db().query(NetworkGroup).get(net_group_id)
-                main_nic.assigned_networks.append(ng_db)
-            db().commit()
 
     def get_node_networks(self, node_id):
         """Method for receiving network data for a given node.
