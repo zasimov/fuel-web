@@ -219,7 +219,7 @@ class interfaces(urwid.WidgetWrap):
         else:
             params = {"ipaddr": responses["ipaddr"],
                       "netmask": responses["netmask"],
-                      "check_by_ping": "none"]}
+                      "check_by_ping": "none"}
         if len(responses["gateway"]) > 1:
             params["gateway"] = responses["gateway"]
         self.log.info("Puppet data: %s %s %s" % (
