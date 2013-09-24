@@ -143,7 +143,7 @@ class interfaces(urwid.WidgetWrap):
                                  urwid.Text(("header", "!!! WARNING !!!")),
                                  "center"))
                 dhcp_info.append(TextLabel("Unable to detect DHCP server on"
-                                 "interface %s." % self.activeiface
+                                 "interface %s." % (self.activeiface) +
                                  "\nDHCP will be set up in the background, "
                                  "but may not receive an IP address. You may "
                                  "want to check your DHCP connection manually "
