@@ -144,8 +144,11 @@ class FuelSetup():
 
     def main(self):
         #Disable kernel print messages. They make our UI ugly
-        retcode = subprocess.call(["echo", "4 1 1 7", ">", 
-                                   "/proc/sys/kernel/printk")
+        noout = open('/dev/null', 'w')
+        retcode = subprocess.call(["echo", "4 1 1 7", ">",
+                                   "/proc/sys/kernel/printk"],
+                                    stdout=noout,
+                                    stderr=noout)
 
         text_header = (u"Fuel %s setup "
                        u"Use Up/Down/Left/Right to navigate.  F8 exits."
@@ -226,8 +229,11 @@ class FuelSetup():
 
     def exit_program(self, button):
         #return kernel logging to normal
-        retcode = subprocess.call(["echo", "7 4 1 7",
-                                   ">/proc/sys/kernel/printk")
+        noout = open('/dev/null', 'w')
+        retcode = subprocess.call(["echo", "7 4 1 7", ">",
+                                   "/proc/sys/kernel/printk"],
+                                    stdout=noout,
+                                    stderr=noout)
 
         raise urwid.ExitMainLoop()
 
