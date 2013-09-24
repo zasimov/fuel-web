@@ -136,7 +136,7 @@ class interfaces(urwid.WidgetWrap):
             dhcp_server_data = dhcp_checker.api.check_dhcp_on_eth(
                 self.activeiface, timeout=3)
             if len(dhcp_server_data) < 1:
-                log.debug("No DHCP servers found. Warning user about "
+                self.log.debug("No DHCP servers found. Warning user about "
                           "dhcp_nowait.")
                 #Build dialog elements
                 dhcp_info = []
