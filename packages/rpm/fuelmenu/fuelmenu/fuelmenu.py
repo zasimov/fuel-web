@@ -226,8 +226,8 @@ class FuelSetup():
 
     def exit_program(self, button):
         #return kernel logging to normal
-        retcode = subprocess.call(["echo", "7 4 1 7", ">", 
-                                   "/proc/sys/kernel/printk")
+        retcode = subprocess.call(["echo", "7 4 1 7",
+                                   ">/proc/sys/kernel/printk")
 
         raise urwid.ExitMainLoop()
 
