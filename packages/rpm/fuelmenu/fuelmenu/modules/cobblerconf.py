@@ -379,14 +379,14 @@ interface first.")
             self.netsettings[iface]['bootproto'] = "none"
             try:
                 with open("/etc/sysconfig/network-scripts/ifcfg-%s" % iface)\
-                         as fh:
+                        as fh:
                     for line in fh:
                         if re.match("^BOOTPROTO=", line):
                             self.netsettings[iface]['bootproto'] = \
                                 line.split('=').strip()
                             break
             except:
-                #Let's try checking for dhclient process running for this interface
+                #Check for dhclient process running for this interface
                 if self.getDHCP(iface):
                     self.netsettings[iface]['bootproto'] = "dhcp"
                 else:
