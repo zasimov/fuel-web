@@ -33,6 +33,7 @@ from nailgun.api.models import IPAddrRange
 from nailgun.api.models import Network
 from nailgun.api.models import NetworkAssignment
 from nailgun.api.models import NetworkGroup
+from nailgun.api.models import NeutronConfiguration
 from nailgun.api.models import Node
 from nailgun.api.models import NodeNICInterface
 from nailgun.api.models import Vlan
@@ -187,6 +188,410 @@ class NetworkManager(object):
             while nic.assigned_networks:
                 nic.assigned_networks.pop()
         db().commit()
+
+    def assign_ips(self, nodes_ids, network_name):
+        """Idempotent assignment IP addresses to nodes.
+
+        All nodes passed as first argument get IP address
+        from network, referred by network_name.
+        If node already has IP address from this network,
+        it remains unchanged. If one of the nodes is the
+        node from other cluster, this func will fail.
+
+        :param node_ids: List of nodes IDs in database.
+        :type  node_ids: list
+        :param network_name: Network name
+        :type  network_name: str
+        :returns: None
+        :raises: Exception, errors.AssignIPError
+        """
+
+        cluster_id = db().query(Node).get(nodes_ids[0]).cluster_id
+        for node_id in nodes_ids:
+            node = db().query(Node).get(node_id)
+            if node.cluster_id != cluster_id:
+                raise Exception(
+                    u"Node id='{0}' doesn't belong to cluster_id='{1}'".format(
+                        node_id,
+                        cluster_id
+                    )
+                )
+
+        network = db().query(Network).join(NetworkGroup). \
+            filter(NetworkGroup.cluster_id == cluster_id). \
+            filter_by(name=network_name).first()
+
+        if not network:
+            raise errors.AssignIPError(
+                u"Network '%s' for cluster_id=%s not found." %
+                (network_name, cluster_id)
+            )
+
+        for node_id in nodes_ids:
+            node_ips = imap(
+                lambda i: i.ip_addr,
+                self._get_ips_except_admin(
+                    node_id=node_id,
+                    network_id=network.id
+                )
+            )
+            # check if any of node_ips in required ranges
+
+            ip_already_assigned = False
+
+            for ip in node_ips:
+                if self.check_ip_belongs_to_net(ip, network):
+                    logger.info(
+                        u"Node id='{0}' already has an IP address "
+                        "inside '{1}' network.".format(
+                            node_id,
+                            network.name
+                        )
+                    )
+                    ip_already_assigned = True
+                    break
+
+            if ip_already_assigned:
+                continue
+
+            # IP address has not been assigned, let's do it
+            logger.info(
+                "Assigning IP for node '{0}' in network '{1}'".format(
+                    node_id,
+                    network_name
+                )
+            )
+            free_ip = self.get_free_ips(network.network_group.id)[0]
+            ip_db = IPAddr(
+                network=network.id,
+                node=node_id,
+                ip_addr=free_ip
+            )
+            db().add(ip_db)
+            db().commit()
+
+    def _get_ips_except_admin(self, node_id=None, network_id=None):
+        """Method for receiving IP addresses for node or network
+        excluding Admin Network IP address.
+
+        :param node_id: Node database ID.
+        :type  node_id: int
+        :param network_id: Network database ID.
+        :type  network_id: int
+        :returns: List of free IP addresses as SQLAlchemy objects.
+        """
+        ips = db().query(IPAddr).order_by(IPAddr.id)
+        if node_id:
+            ips = ips.filter_by(node=node_id)
+        if network_id:
+            ips = ips.filter_by(network=network_id)
+
+        admin_net_id = self.get_admin_network_id(False)
+        if admin_net_id:
+            ips = ips.filter(
+                not_(IPAddr.network == admin_net_id)
+            )
+
+        return ips.all()
+
+    def check_ip_belongs_to_net(self, ip_addr, network):
+        addr = IPAddress(ip_addr)
+        ipranges = imap(
+            lambda ir: IPRange(ir.first, ir.last),
+            network.network_group.ip_ranges
+        )
+        for r in ipranges:
+            if addr in r:
+                return True
+        return False
+
+    def get_free_ips(self, network_group_id, num=1):
+        """Returns list of free IP addresses for given Network Group
+        """
+        ng = db().query(NetworkGroup).get(network_group_id)
+        free_ips = []
+        for ip in self._iter_free_ips(ng):
+            free_ips.append(str(ip))
+            if len(free_ips) == num:
+                break
+        if len(free_ips) < num:
+            raise errors.OutOfIPs()
+        return free_ips
+
+    def _iter_free_ips(self, network_group):
+        """Represents iterator over free IP addresses
+        in all ranges for given Network Group
+        """
+        for ip_addr in ifilter(
+                lambda ip: db().query(IPAddr).filter_by(
+                        ip_addr=str(ip)
+                ).first() is None and not ip == network_group.gateway,
+                chain(*[
+                    IPRange(ir.first, ir.last)
+                    for ir in network_group.ip_ranges
+                ])
+        ):
+            yield ip_addr
+
+    def assign_admin_ips(self, node_id, num=1):
+        '''Method for assigning admin IP addresses to nodes.
+
+        :param node_id: Node database ID.
+        :type  node_id: int
+        :param num: Number of IP addresses for node.
+        :type  num: int
+        :returns: None
+        '''
+        admin_net_id = self.get_admin_network_id()
+        node_admin_ips = db().query(IPAddr).filter_by(
+            node=node_id,
+            network=admin_net_id
+        ).all()
+
+        if not node_admin_ips or len(node_admin_ips) < num:
+            admin_net = db().query(Network).get(admin_net_id)
+            logger.debug(
+                u"Trying to assign admin ips: node=%s count=%s",
+                node_id,
+                num - len(node_admin_ips)
+            )
+            free_ips = self.get_free_ips(
+                admin_net.network_group.id,
+                num=num - len(node_admin_ips)
+            )
+            logger.info(len(free_ips))
+            for ip in free_ips:
+                ip_db = IPAddr(
+                    node=node_id,
+                    ip_addr=ip,
+                    network=admin_net_id
+                )
+                db().add(ip_db)
+            db().commit()
+
+    def _get_interface_by_network_name(self, node_id, network_name):
+        """Return network device which has appointed
+        network with specified network name
+        """
+        node_db = db().query(Node).get(node_id)
+        for interface in node_db.interfaces:
+            for network in interface.assigned_networks:
+                if network.name == network_name:
+                    return interface
+
+        raise errors.CanNotFindInterface()
+
+    def _get_admin_network(self, node):
+        """Node contain mac address which sent ohai,
+        when node was loaded. By this mac address
+        we can identify interface name for admin network.
+        """
+        for interface in node.meta.get('interfaces', []):
+            if interface['mac'] == node.mac:
+                return {
+                    'name': u'admin',
+                    'dev': interface['name']}
+
+        raise errors.CanNotFindInterface()
+
+    def update_interfaces_info(self, node_id):
+        node = db().query(Node).get(node_id)
+        if "interfaces" not in node.meta:
+            raise Exception("No interfaces metadata specified for node")
+
+        for interface in node.meta["interfaces"]:
+            interface_db = db().query(NodeNICInterface).filter_by(
+                mac=interface['mac']).first()
+            if interface_db:
+                self.__update_existing_interface(interface_db.id, interface)
+            else:
+                self.__add_new_interface(node, interface)
+
+        self.__delete_not_found_interfaces(node, node.meta["interfaces"])
+
+    def __add_new_interface(self, node, interface_attrs):
+        interface = NodeNICInterface()
+        interface.node_id = node.id
+        self.__set_interface_attributes(interface, interface_attrs)
+        db().add(interface)
+        db().commit()
+        node.interfaces.append(interface)
+
+    def __update_existing_interface(self, interface_id, interface_attrs):
+        interface = db().query(NodeNICInterface).get(interface_id)
+        self.__set_interface_attributes(interface, interface_attrs)
+        db().commit()
+
+    def __set_interface_attributes(self, interface, interface_attrs):
+        interface.name = interface_attrs["name"]
+        interface.mac = interface_attrs["mac"]
+
+        interface.current_speed = interface_attrs.get("current_speed")
+        interface.max_speed = interface_attrs.get("max_speed")
+
+    def __delete_not_found_interfaces(self, node, interfaces):
+        interfaces_mac_addresses = map(
+            lambda interface: interface['mac'], interfaces)
+
+        interfaces_to_delete = db().query(NodeNICInterface).filter(
+            NodeNICInterface.node_id == node.id
+        ).filter(
+            not_(NodeNICInterface.mac.in_(interfaces_mac_addresses))
+        ).all()
+
+        if interfaces_to_delete:
+            mac_addresses = ' '.join(
+                map(lambda i: i.mac, interfaces_to_delete))
+
+            node_name = node.name or node.mac
+            logger.info("Interfaces %s removed from node %s" % (
+                mac_addresses, node_name))
+
+            map(db().delete, interfaces_to_delete)
+
+    def _update_attrs(self, node_data):
+        node_db = db().query(Node).get(node_data['id'])
+        interfaces = node_data['interfaces']
+        interfaces_db = node_db.interfaces
+        for iface in interfaces:
+            current_iface = filter(
+                lambda i: i.id == iface['id'],
+                interfaces_db
+            )[0]
+            # Remove all old network's assignment for this interface.
+            db().query(NetworkAssignment).filter_by(
+                interface_id=current_iface.id
+            ).delete()
+            for net in iface['assigned_networks']:
+                net_assignment = NetworkAssignment()
+                net_assignment.network_id = net['id']
+                net_assignment.interface_id = current_iface.id
+                db().add(net_assignment)
+        db().commit()
+        return node_db.id
+
+    def get_default_nic_networkgroups(self, node_id, nic_id):
+        main_nic_id = self.get_main_nic(node_id)
+        return self.get_all_cluster_networkgroups(node_id) \
+            if nic_id == main_nic_id else []
+
+    def get_all_cluster_networkgroups(self, node_id):
+        node_db = db().query(Node).get(node_id)
+        if node_db.cluster:
+            return [ng.id for ng in node_db.cluster.network_groups]
+        return []
+
+    def get_allowed_nic_networkgroups(self, node_id, nic_id):
+        """nic_id is not used now, but this logic will be improved
+        in the future, so let it be
+        """
+        return self.get_all_cluster_networkgroups(node_id)
+
+    def is_range_in_cidr(self, ip_network, ip_range):
+        """Takes two objects that represent IP address range
+        and checks if those ranges are intersecting.
+
+        :arg* IPNetwork, IPRange: - valid object with IP range
+        :returns bool: - is networks intersecting
+        :raises ValueError: if arg* neither IPNetwork or IPRange
+        """
+        l_range_addr, r_range_addr = self.get_min_max_addr(ip_range)
+        l_network_addr, r_network_addr = self.get_min_max_addr(ip_network)
+        if l_network_addr != l_range_addr:
+            if l_network_addr < l_range_addr:
+                return r_network_addr > l_range_addr
+            else:
+                return r_range_addr > l_network_addr
+        else:
+            return True
+
+    def get_min_max_addr(self, range_object):
+        """takes object which implicitly has IP range
+         and returns min and max address as tuple of two IPAddress elements
+
+        :range_object IPNetwork, IPRange: - object with ip range
+        :return (IPAddress, IPAddress):
+        """
+        if isinstance(range_object, IPRange):
+            return map(
+                IPAddress,
+                str(range_object).split('-')
+            )
+        else:
+            prefix_length = range_object.prefixlen
+            bin_addr = range_object.ip.bits().replace('.', '')
+            min_max_bin_addr = [bin_addr[0:prefix_length] +
+                                x * (32 - prefix_length) for x in ('0', '1')]
+            return map(
+                self.bin_to_ip_addr,
+                min_max_bin_addr
+            )
+
+    def bin_to_ip_addr(self, bin):
+        """converts string of 32 digits to IP address
+
+        :bin str: is binary representation of IP address, must be 32 character
+        long with ones and zeros  (ex: '00101100110011000011001100110011' )
+        :returns IPAddress: returns object of IPAddress class
+        """
+        return IPAddress('.'.join(
+            map(
+                lambda x: str(int(''.join(x), 2)),
+                zip(*[iter(bin)] * 8)
+            )
+        )
+        )
+
+    @classmethod
+    def _chunked_range(cls, iterable, chunksize=64):
+        """We want to be able to iterate over iterable chunk by chunk.
+        We instantiate iter object from itarable. We then yield
+        iter instance slice in infinite loop. Iter slice starts
+        from the last used position and finishes on the position
+        which is offset with chunksize from the last used position.
+
+        :param iterable: Iterable object.
+        :type  iterable: iterable
+        :param chunksize: Size of chunk to iterate through.
+        :type  chunksize: int
+        :yields: iterator
+        :raises: StopIteration
+        """
+        it = iter(iterable)
+        while True:
+            s = islice(it, chunksize)
+            # Here we check if iterator is not empty calling
+            # next() method which raises StopInteration if
+            # iter is empty. If iter is not empty we yield
+            # iterator which is concatenation of fisrt element in
+            # slice and the ramained elements.
+            yield chain([s.next()], s)
+
+    def _get_free_ips_from_range(self, iterable, num=1):
+        """Method for receiving free IP addresses from range.
+
+        :param iterable: Iterable object with IP addresses.
+        :type  iterable: iterable
+        :param num: Number of IP addresses to return.
+        :type  num: int
+        :returns: List of free IP addresses from given range.
+        :raises: errors.OutOfIPs
+        """
+        free_ips = []
+        for chunk in self._chunked_range(iterable):
+            from_range = set(chunk)
+            diff = from_range - set(
+                [i.ip_addr for i in db().query(IPAddr).
+                filter(IPAddr.ip_addr.in_(from_range))]
+            )
+            while len(free_ips) < num:
+                try:
+                    free_ips.append(diff.pop())
+                except KeyError:
+                    break
+            if len(free_ips) == num:
+                return free_ips
+        raise errors.OutOfIPs()
 
 
 class NeutronNetworkManager(NetworkManager):
@@ -364,6 +769,124 @@ class NeutronNetworkManager(NetworkManager):
         )
         db().commit()
 
+    #TODO make it consistent
+    def clear_vlans(self):
+        self.clear_segment_ids()
+
+    def get_node_networks(self, node_id):
+        """Method for receiving network data for a given node.
+
+        :param node_id: Node database ID.
+        :type  node_id: int
+        :returns: List of network info for node.
+        """
+        node_db = db().query(Node).get(node_id)
+        cluster_db = node_db.cluster
+        if cluster_db is None:
+            # Node doesn't belong to any cluster, so it should not have nets
+            return []
+
+        ips = self._get_ips_except_admin(node_id=node_id)
+        network_data = []
+        network_ids = []
+        for i in ips:
+            net = db().query(Network).get(i.network)
+            interface = self._get_interface_by_network_name(
+                node_db.id,
+                net.name
+            )
+
+            network_data.append({
+                'name': net.name,
+                'vlan': net.seg_id,
+                #'seg_id': net.seg_id,
+                'ip': i.ip_addr + '/' + str(IPNetwork(net.cidr).prefixlen),
+                'netmask': str(IPNetwork(net.cidr).netmask),
+                'brd': str(IPNetwork(net.cidr).broadcast),
+                'gateway': net.gateway,
+                'dev': interface.name})
+            network_ids.append(net.id)
+
+        # And now let's add networks w/o IP addresses
+        nets = db().query(Network).join(NetworkGroup). \
+            filter(NetworkGroup.cluster_id == cluster_db.id)
+        if network_ids:
+            nets = nets.filter(not_(Network.id.in_(network_ids)))
+
+        # Now we pass information about all remaining networks
+        for net in nets.order_by(Network.id).all():
+            interface = self._get_interface_by_network_name(
+                node_db.id,
+                net.name
+            )
+
+            network_data.append({
+                'name': net.name,
+                #'vlan': net.seg_id,
+                #'seg_id': net.seg_id,
+                'dev': interface.name})
+
+        network_data.append(self._get_admin_network(node_db))
+
+        return network_data
+
+    def get_end_point_ip(self, cluster_id):
+        cluster_db = db().query(Cluster).get(cluster_id)
+        ip = None
+
+        controller = db().query(Node).filter_by(
+            cluster_id=cluster_id
+        ).filter(Node.role_list.any(name='controller')).first()
+
+        public_net = filter(
+            lambda network: network['name'] == 'public',
+            controller.network_data)[0]
+
+        if public_net.get('ip'):
+            ip = public_net['ip'].split('/')[0]
+
+        if not ip:
+            raise errors.CanNotDetermineEndPointIP(
+                u'Can not determine end point IP for cluster %s' %
+                cluster_db.full_name)
+
+        return ip
+
+    def get_horizon_url(self, cluster_id):
+        return 'http://%s/' % self.get_end_point_ip(cluster_id)
+
+    def get_keystone_url(self, cluster_id):
+        return 'http://%s:5000/' % self.get_end_point_ip(cluster_id)
+
+    def update(self, cluster, network_configuration):
+        if 'neutron_configuration' in network_configuration:
+            cfg = network_configuration['neutron_configuration']
+            neutron_cfg_inst = NeutronConfiguration(
+                parameters=cfg,
+                predefined_networks=cfg['predefined_networks'],
+                base_mac=cfg['base_mac'],
+                segmentation_type=cfg['segmentation_type'],
+                segmentation_id_ranges=cfg['segmentation_id_ranges'],
+                public_network=cfg['public_network'],
+                db_reconnect_interval=cfg['db_reconnect_interval']
+            )
+            db().add(neutron_cfg_inst)
+            db().commit()
+            setattr(cluster, 'net_manager', neutron_cfg_inst.id)
+
+        if 'networks' in network_configuration:
+            for ng in network_configuration['networks']:
+                ng_db = db().query(NetworkGroup).get(ng['id'])
+
+                for key, value in ng.iteritems():
+                    if key == 'cidr':
+                        self.update_ranges_from_cidr(ng_db, value)
+
+                    setattr(ng_db, key, value)
+
+                self.create_networks(ng_db)
+                ng_db.cluster.add_pending_changes('networks')
+
 
 class NovaNetworkManager(NetworkManager):
 
@@ -518,123 +1041,6 @@ class NovaNetworkManager(NetworkManager):
             db().add(net_db)
         db().commit()
 
-    def assign_admin_ips(self, node_id, num=1):
-        '''Method for assigning admin IP addresses to nodes.
-
-        :param node_id: Node database ID.
-        :type  node_id: int
-        :param num: Number of IP addresses for node.
-        :type  num: int
-        :returns: None
-        '''
-        admin_net_id = self.get_admin_network_id()
-        node_admin_ips = db().query(IPAddr).filter_by(
-            node=node_id,
-            network=admin_net_id
-        ).all()
-
-        if not node_admin_ips or len(node_admin_ips) < num:
-            admin_net = db().query(Network).get(admin_net_id)
-            logger.debug(
-                u"Trying to assign admin ips: node=%s count=%s",
-                node_id,
-                num - len(node_admin_ips)
-            )
-            free_ips = self.get_free_ips(
-                admin_net.network_group.id,
-                num=num - len(node_admin_ips)
-            )
-            logger.info(len(free_ips))
-            for ip in free_ips:
-                ip_db = IPAddr(
-                    node=node_id,
-                    ip_addr=ip,
-                    network=admin_net_id
-                )
-                db().add(ip_db)
-            db().commit()
-
-    def assign_ips(self, nodes_ids, network_name):
-        """Idempotent assignment IP addresses to nodes.
-
-        All nodes passed as first argument get IP address
-        from network, referred by network_name.
-        If node already has IP address from this network,
-        it remains unchanged. If one of the nodes is the
-        node from other cluster, this func will fail.
-
-        :param node_ids: List of nodes IDs in database.
-        :type  node_ids: list
-        :param network_name: Network name
-        :type  network_name: str
-        :returns: None
-        :raises: Exception, errors.AssignIPError
-        """
-
-        cluster_id = db().query(Node).get(nodes_ids[0]).cluster_id
-        for node_id in nodes_ids:
-            node = db().query(Node).get(node_id)
-            if node.cluster_id != cluster_id:
-                raise Exception(
-                    u"Node id='{0}' doesn't belong to cluster_id='{1}'".format(
-                        node_id,
-                        cluster_id
-                    )
-                )
-
-        network = db().query(Network).join(NetworkGroup).\
-            filter(NetworkGroup.cluster_id == cluster_id).\
-            filter_by(name=network_name).first()
-
-        if not network:
-            raise errors.AssignIPError(
-                u"Network '%s' for cluster_id=%s not found." %
-                (network_name, cluster_id)
-            )
-
-        for node_id in nodes_ids:
-            node_ips = imap(
-                lambda i: i.ip_addr,
-                self._get_ips_except_admin(
-                    node_id=node_id,
-                    network_id=network.id
-                )
-            )
-            # check if any of node_ips in required ranges
-
-            ip_already_assigned = False
-
-            for ip in node_ips:
-                if self.check_ip_belongs_to_net(ip, network):
-                    logger.info(
-                        u"Node id='{0}' already has an IP address "
-                        "inside '{1}' network.".format(
-                            node_id,
-                            network.name
-                        )
-                    )
-                    ip_already_assigned = True
-                    break
-
-            if ip_already_assigned:
-                continue
-
-            # IP address has not been assigned, let's do it
-            logger.info(
-                "Assigning IP for node '{0}' in network '{1}'".format(
-                    node_id,
-                    network_name
-                )
-            )
-            free_ip = self.get_free_ips(network.network_group.id)[0]
-            ip_db = IPAddr(
-                network=network.id,
-                node=node_id,
-                ip_addr=free_ip
-            )
-            db().add(ip_db)
-            db().commit()
-
     def assign_vip(self, cluster_id, network_name):
         """Idempotent assignment VirtualIP addresses to cluster.
         Returns VIP for given cluster and network.
@@ -698,120 +1104,6 @@ class NovaNetworkManager(NetworkManager):
             db().query(Vlan).filter_by(network=None)
         )
         db().commit()
-
-    @classmethod
-    def _chunked_range(cls, iterable, chunksize=64):
-        """We want to be able to iterate over iterable chunk by chunk.
-        We instantiate iter object from itarable. We then yield
-        iter instance slice in infinite loop. Iter slice starts
-        from the last used position and finishes on the position
-        which is offset with chunksize from the last used position.
-
-        :param iterable: Iterable object.
-        :type  iterable: iterable
-        :param chunksize: Size of chunk to iterate through.
-        :type  chunksize: int
-        :yields: iterator
-        :raises: StopIteration
-        """
-        it = iter(iterable)
-        while True:
-            s = islice(it, chunksize)
-            # Here we check if iterator is not empty calling
-            # next() method which raises StopInteration if
-            # iter is empty. If iter is not empty we yield
-            # iterator which is concatenation of fisrt element in
-            # slice and the ramained elements.
-            yield chain([s.next()], s)
-
-    def check_ip_belongs_to_net(self, ip_addr, network):
-        addr = IPAddress(ip_addr)
-        ipranges = imap(
-            lambda ir: IPRange(ir.first, ir.last),
-            network.network_group.ip_ranges
-        )
-        for r in ipranges:
-            if addr in r:
-                return True
-        return False
-
-    def _iter_free_ips(self, network_group):
-        """Represents iterator over free IP addresses
-        in all ranges for given Network Group
-        """
-        for ip_addr in ifilter(
-            lambda ip: db().query(IPAddr).filter_by(
-                ip_addr=str(ip)
-            ).first() is None and not ip == network_group.gateway,
-            chain(*[
-                IPRange(ir.first, ir.last)
-                for ir in network_group.ip_ranges
-            ])
-        ):
-            yield ip_addr
-
-    def get_free_ips(self, network_group_id, num=1):
-        """Returns list of free IP addresses for given Network Group
-        """
-        ng = db().query(NetworkGroup).get(network_group_id)
-        free_ips = []
-        for ip in self._iter_free_ips(ng):
-            free_ips.append(str(ip))
-            if len(free_ips) == num:
-                break
-        if len(free_ips) < num:
-            raise errors.OutOfIPs()
-        return free_ips
-
-    def _get_free_ips_from_range(self, iterable, num=1):
-        """Method for receiving free IP addresses from range.
-
-        :param iterable: Iterable object with IP addresses.
-        :type  iterable: iterable
-        :param num: Number of IP addresses to return.
-        :type  num: int
-        :returns: List of free IP addresses from given range.
-        :raises: errors.OutOfIPs
-        """
-        free_ips = []
-        for chunk in self._chunked_range(iterable):
-            from_range = set(chunk)
-            diff = from_range - set(
-                [i.ip_addr for i in db().query(IPAddr).
-                 filter(IPAddr.ip_addr.in_(from_range))]
-            )
-            while len(free_ips) < num:
-                try:
-                    free_ips.append(diff.pop())
-                except KeyError:
-                    break
-            if len(free_ips) == num:
-                return free_ips
-        raise errors.OutOfIPs()
-
-    def _get_ips_except_admin(self, node_id=None, network_id=None):
-        """Method for receiving IP addresses for node or network
-        excluding Admin Network IP address.
-
-        :param node_id: Node database ID.
-        :type  node_id: int
-        :param network_id: Network database ID.
-        :type  network_id: int
-        :returns: List of free IP addresses as SQLAlchemy objects.
-        """
-        ips = db().query(IPAddr).order_by(IPAddr.id)
-        if node_id:
-            ips = ips.filter_by(node=node_id)
-        if network_id:
-            ips = ips.filter_by(network=network_id)
-
-        admin_net_id = self.get_admin_network_id(False)
-        if admin_net_id:
-            ips = ips.filter(
-                not_(IPAddr.network == admin_net_id)
-            )
-
-        return ips.all()
 
     def get_node_networks(self, node_id):
         """Method for receiving network data for a given node.
@@ -887,124 +1179,6 @@ class NovaNetworkManager(NetworkManager):
 
         return network_data
 
-    def _update_attrs(self, node_data):
-        node_db = db().query(Node).get(node_data['id'])
-        interfaces = node_data['interfaces']
-        interfaces_db = node_db.interfaces
-        for iface in interfaces:
-            current_iface = filter(
-                lambda i: i.id == iface['id'],
-                interfaces_db
-            )[0]
-            # Remove all old network's assignment for this interface.
-            db().query(NetworkAssignment).filter_by(
-                interface_id=current_iface.id
-            ).delete()
-            for net in iface['assigned_networks']:
-                net_assignment = NetworkAssignment()
-                net_assignment.network_id = net['id']
-                net_assignment.interface_id = current_iface.id
-                db().add(net_assignment)
-        db().commit()
-        return node_db.id
-
-    def update_interfaces_info(self, node_id):
-        node = db().query(Node).get(node_id)
-        if "interfaces" not in node.meta:
-            raise Exception("No interfaces metadata specified for node")
-
-        for interface in node.meta["interfaces"]:
-            interface_db = db().query(NodeNICInterface).filter_by(
-                mac=interface['mac']).first()
-            if interface_db:
-                self.__update_existing_interface(interface_db.id, interface)
-            else:
-                self.__add_new_interface(node, interface)
-
-        self.__delete_not_found_interfaces(node, node.meta["interfaces"])
-
-    def __add_new_interface(self, node, interface_attrs):
-        interface = NodeNICInterface()
-        interface.node_id = node.id
-        self.__set_interface_attributes(interface, interface_attrs)
-        db().add(interface)
-        db().commit()
-        node.interfaces.append(interface)
-
-    def __update_existing_interface(self, interface_id, interface_attrs):
-        interface = db().query(NodeNICInterface).get(interface_id)
-        self.__set_interface_attributes(interface, interface_attrs)
-        db().commit()
-
-    def __set_interface_attributes(self, interface, interface_attrs):
-        interface.name = interface_attrs["name"]
-        interface.mac = interface_attrs["mac"]
-
-        interface.current_speed = interface_attrs.get("current_speed")
-        interface.max_speed = interface_attrs.get("max_speed")
-
-    def __delete_not_found_interfaces(self, node, interfaces):
-        interfaces_mac_addresses = map(
-            lambda interface: interface['mac'], interfaces)
-
-        interfaces_to_delete = db().query(NodeNICInterface).filter(
-            NodeNICInterface.node_id == node.id
-        ).filter(
-            not_(NodeNICInterface.mac.in_(interfaces_mac_addresses))
-        ).all()
-
-        if interfaces_to_delete:
-            mac_addresses = ' '.join(
-                map(lambda i: i.mac, interfaces_to_delete))
-
-            node_name = node.name or node.mac
-            logger.info("Interfaces %s removed from node %s" % (
-                mac_addresses, node_name))
-
-            map(db().delete, interfaces_to_delete)
-
-    def get_default_nic_networkgroups(self, node_id, nic_id):
-        main_nic_id = self.get_main_nic(node_id)
-        return self.get_all_cluster_networkgroups(node_id) \
-            if nic_id == main_nic_id else []
-
-    def get_all_cluster_networkgroups(self, node_id):
-        node_db = db().query(Node).get(node_id)
-        if node_db.cluster:
-            return [ng.id for ng in node_db.cluster.network_groups]
-        return []
-
-    def get_allowed_nic_networkgroups(self, node_id, nic_id):
-        """nic_id is not used now, but this logic will be improved
-        in the future, so let it be
-        """
-        return self.get_all_cluster_networkgroups(node_id)
-
-    def _get_admin_network(self, node):
-        """Node contain mac address which sent ohai,
-        when node was loaded. By this mac address
-        we can identify interface name for admin network.
-        """
-        for interface in node.meta.get('interfaces', []):
-            if interface['mac'] == node.mac:
-                return {
-                    'name': u'admin',
-                    'dev': interface['name']}
-
-        raise errors.CanNotFindInterface()
-
-    def _get_interface_by_network_name(self, node_id, network_name):
-        """Return network device which has appointed
-        network with specified network name
-        """
-        node_db = db().query(Node).get(node_id)
-        for interface in node_db.interfaces:
-            for network in interface.assigned_networks:
-                if network.name == network_name:
-                    return interface
-
-        raise errors.CanNotFindInterface()
-
     def get_end_point_ip(self, cluster_id):
         cluster_db = db().query(Cluster).get(cluster_id)
         ip = None
@@ -1035,57 +1209,39 @@ class NovaNetworkManager(NetworkManager):
     def get_keystone_url(self, cluster_id):
         return 'http://%s:5000/' % self.get_end_point_ip(cluster_id)
 
-    def is_range_in_cidr(self, ip_network, ip_range):
-        """Takes two objects that represent IP address range
-        and checks if those ranges are intersecting.
+    def update(self, cluster, network_configuration):
+        if 'net_manager' in network_configuration:
+            setattr(
+                cluster,
+                'net_manager',
+                network_configuration['net_manager'])
 
-        :arg* IPNetwork, IPRange: - valid object with IP range
-        :returns bool: - is networks intersecting
-        :raises ValueError: if arg* neither IPNetwork or IPRange
-        """
-        l_range_addr, r_range_addr = self.get_min_max_addr(ip_range)
-        l_network_addr, r_network_addr = self.get_min_max_addr(ip_network)
-        if l_network_addr != l_range_addr:
-            if l_network_addr < l_range_addr:
-                return r_network_addr > l_range_addr
-            else:
-                return r_range_addr > l_network_addr
-        else:
-            return True
+        if 'networks' in network_configuration:
+            for ng in network_configuration['networks']:
+                ng_db = db().query(NetworkGroup).get(ng['id'])
 
-    def get_min_max_addr(self, range_object):
-        """takes object which implicitly has IP range
-         and returns min and max address as tuple of two IPAddress elements
+                for key, value in ng.iteritems():
+                    if key == "ip_ranges":
+                        self.__set_ip_ranges(ng['id'], value)
+                    else:
+                        if key == 'cidr' and \
+                                not ng['name'] in ('public', 'floating'):
+                            self.update_ranges_from_cidr(ng_db, value)
 
-        :range_object IPNetwork, IPRange: - object with ip range
-        :return (IPAddress, IPAddress):
-        """
-        if isinstance(range_object, IPRange):
-            return map(
-                IPAddress,
-                str(range_object).split('-')
-            )
-        else:
-            prefix_length = range_object.prefixlen
-            bin_addr = range_object.ip.bits().replace('.', '')
-            min_max_bin_addr = [bin_addr[0:prefix_length] +
-                                x * (32 - prefix_length) for x in ('0', '1')]
-            return map(
-                self.bin_to_ip_addr,
-                min_max_bin_addr
-            )
+                        setattr(ng_db, key, value)
 
-    def bin_to_ip_addr(self, bin):
-        """converts string of 32 digits to IP address
+                self.create_networks(ng_db)
+                ng_db.cluster.add_pending_changes('networks')
 
-        :bin str: is binary representation of IP address, must be 32 character
-        long with ones and zeros  (ex: '00101100110011000011001100110011' )
-        :returns IPAddress: returns object of IPAddress class
-        """
-        return IPAddress('.'.join(
-            map(
-                lambda x: str(int(''.join(x), 2)),
-                zip(*[iter(bin)] * 8)
-            )
-        )
-        )
+    def __set_ip_ranges(self, network_group_id, ip_ranges):
+        # deleting old ip ranges
+        db().query(IPAddrRange).filter_by(
+            network_group_id=network_group_id).delete()
+
+        for r in ip_ranges:
+            new_ip_range = IPAddrRange(
+                first=r[0],
+                last=r[1],
+                network_group_id=network_group_id)
+            db().add(new_ip_range)
+        db().commit()

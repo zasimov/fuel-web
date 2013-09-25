@@ -177,7 +177,7 @@ class Cluster(Base):
     name = Column(Unicode(50), unique=True, nullable=False)
     release_id = Column(Integer, ForeignKey('releases.id'), nullable=False)
     neutron_cfg_id = Column(Integer, ForeignKey('neutron_configuration.id'),
-                            nullable=False)
+                            nullable=True)
     nodes = relationship("Node", backref="cluster", cascade="delete")
     tasks = relationship("Task", backref="cluster", cascade="delete")
     attributes = relationship("Attributes", uselist=False,
@@ -227,6 +227,16 @@ class Cluster(Base):
             return NovaNetworkManager
         from nailgun.network.manager import NeutronNetworkManager
         return NeutronNetworkManager
+
+    @property
+    def network_serializer(self):
+        if self.net_provider == Cluster.NET_PROVIDERS.NovaNet:
+            from nailgun.api.serializers.network_configuration \
+                import NovaNetworkConfigurationSerializer
+            return NovaNetworkConfigurationSerializer
+        from nailgun.api.serializers.network_configuration \
+            import NeutronNetworkConfigurationSerializer
+        return NeutronNetworkConfigurationSerializer
 
     def add_pending_changes(self, changes_type, node_id=None):
         ex_chs = db().query(ClusterChanges).filter_by(
@@ -341,9 +351,9 @@ class Node(Base):
     def network_data(self):
         # It is required for integration tests; to get info about nets
         #   which must be created on target node
-        from nailgun.network.manager import NetworkManager
-        netmanager = NetworkManager()
-        return netmanager.get_node_networks(self.id)
+        if not self.cluster:
+            return []
+        return self.cluster.network_manager().get_node_networks(self.id)
 
     @property
     def volume_manager(self):
@@ -404,7 +414,7 @@ class Node(Base):
         return iface
 
     def update_meta(self, data):
-        # helper for basic checking meta before updation
+        # helper for basic checking meta before update
         result = []
         for iface in data["interfaces"]:
             if not self._check_interface_has_required_params(iface):
@@ -481,7 +491,7 @@ class Network(Base):
     release = Column(Integer, ForeignKey('releases.id'))
     name = Column(Unicode(100), nullable=False)
     vlan_id = Column(Integer, ForeignKey('vlan.id'))
-    seg_id = Column(Integer)#, ForeignKey('vlan.id'))
+    seg_id = Column(Integer, ForeignKey('network_segment_id.id'))
     network_group_id = Column(Integer, ForeignKey('network_groups.id'))
     cidr = Column(String(25), nullable=False)
     gateway = Column(String(25))
@@ -518,8 +528,8 @@ class NetworkGroup(Base):
     network_size = Column(Integer, default=256)
     amount = Column(Integer, default=1)
     vlan_start = Column(Integer, default=1)
-    seg_id_first = Column(Integer, default=1)
-    seg_id_last = Column(Integer, default=1)
+    seg_id_first = Column(Integer, default=0)
+    seg_id_last = Column(Integer, default=0)
     networks = relationship("Network", cascade="delete",
                             backref="network_group")
     cidr = Column(String(25))
@@ -547,50 +557,6 @@ class NetworkGroup(Base):
     def segmentation_type(self):
         cluster = db().query(Cluster).filter_by(id=self.cluster_id).first()
         return cluster.net_segmentation_type
-
-
-class NetworkConfiguration(object):
-    @classmethod
-    def update(cls, cluster, network_configuration):
-        from nailgun.network.manager import NetworkManager
-        network_manager = NetworkManager()
-        if 'net_manager' in network_configuration:
-            setattr(
-                cluster,
-                'net_manager',
-                network_configuration['net_manager'])
-
-        if 'networks' in network_configuration:
-            for ng in network_configuration['networks']:
-                ng_db = db().query(NetworkGroup).get(ng['id'])
-
-                for key, value in ng.iteritems():
-                    if key == "ip_ranges":
-                        cls.__set_ip_ranges(ng['id'], value)
-                    else:
-                        if key == 'cidr' and \
-                                not ng['name'] in ('public', 'floating'):
-                            network_manager.update_ranges_from_cidr(
-                                ng_db, value)
-
-                        setattr(ng_db, key, value)
-
-                network_manager.create_networks(ng_db)
-                ng_db.cluster.add_pending_changes('networks')
-
-    @classmethod
-    def __set_ip_ranges(cls, network_group_id, ip_ranges):
-        # deleting old ip ranges
-        db().query(IPAddrRange).filter_by(
-            network_group_id=network_group_id).delete()
-
-        for r in ip_ranges:
-            new_ip_range = IPAddrRange(
-                first=r[0],
-                last=r[1],
-                network_group_id=network_group_id)
-            db().add(new_ip_range)
-        db().commit()
 
 
 class AttributesGenerators(object):

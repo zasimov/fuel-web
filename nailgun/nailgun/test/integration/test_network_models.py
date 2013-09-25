@@ -44,7 +44,7 @@ class TestNetworkModels(BaseIntegrationTest):
         ng = NetworkGroup(**kw)
         self.db.add(ng)
         self.db.commit()
-        self.env.network_manager.create_networks(ng)
+        self.env.network_manager().create_networks(ng)
         nets_db = self.db.query(Network).filter(
             not_(Network.name == "fuelweb_admin")
         ).all()
@@ -97,7 +97,7 @@ class TestNetworkModels(BaseIntegrationTest):
         ng = NetworkGroup(**kw)
         self.db.add(ng)
         self.db.commit()
-        self.env.network_manager.create_networks(ng)
+        self.env.network_manager().create_networks(ng)
         nets_db = self.db.query(Network).filter(
             not_(Network.name == "fuelweb_admin")
         ).all()
@@ -122,7 +122,7 @@ class TestNetworkModels(BaseIntegrationTest):
         ng = NetworkGroup(**kw)
         self.db.add(ng)
         self.db.commit()
-        self.env.network_manager.create_networks(ng)
+        self.env.network_manager().create_networks(ng)
         nets_db = self.db.query(Network).filter(
             not_(Network.name == "fuelweb_admin")
         ).all()
@@ -145,7 +145,7 @@ class TestNetworkModels(BaseIntegrationTest):
         ng = NetworkGroup(**kw)
         self.db.add(ng)
         self.db.commit()
-        self.env.network_manager.create_networks(ng)
+        self.env.network_manager().create_networks(ng)
         self.db.refresh(ng)
         self.assertEquals(ng.cidr, "172.0.0.0/24")
 
@@ -162,7 +162,7 @@ class TestNetworkModels(BaseIntegrationTest):
         ng = NetworkGroup(**kw)
         self.db.add(ng)
         self.db.commit()
-        self.env.network_manager.create_networks(ng)
+        self.env.network_manager().create_networks(ng)
         self.db.refresh(ng)
         self.assertEquals(ng.cidr, "172.0.0.0/8")
 
@@ -180,7 +180,7 @@ class TestNetworkModels(BaseIntegrationTest):
         ng = NetworkGroup(**kw)
         self.db.add(ng)
         self.db.commit()
-        self.env.network_manager.create_networks(ng)
+        self.env.network_manager().create_networks(ng)
         nets_db = self.db.query(Network).filter(
             not_(Network.name == "fuelweb_admin")
         ).all()

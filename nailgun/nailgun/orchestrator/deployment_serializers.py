@@ -16,6 +16,7 @@
 
 """Deployment serializers for orchestrator"""
 
+from nailgun.api.models import Cluster
 from nailgun.api.models import NetworkGroup
 from nailgun.api.models import Node
 from nailgun.db import db
@@ -503,11 +504,12 @@ class OrchestratorHASerializer(OrchestratorSerializer):
         common_attrs = super(OrchestratorHASerializer, cls).get_common_attrs(
             cluster)
 
-        netmanager = NetworkManager()
-        common_attrs['management_vip'] = netmanager.assign_vip(
-            cluster.id, 'management')
-        common_attrs['public_vip'] = netmanager.assign_vip(
-            cluster.id, 'public')
+        if cluster.net_provider == Cluster.NET_PROVIDERS.NovaNet:
+            netmanager = cluster.network_manager()
+            common_attrs['management_vip'] = netmanager.assign_vip(
+                cluster.id, 'management')
+            common_attrs['public_vip'] = netmanager.assign_vip(
+                cluster.id, 'public')
 
         sorted_nodes = sorted(
             common_attrs['nodes'], key=lambda node: node['uid'])

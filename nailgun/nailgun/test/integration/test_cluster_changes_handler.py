@@ -80,7 +80,7 @@ class TestHandlers(BaseIntegrationTest):
 
             'master_ip': '127.0.0.1',
             'use_cinder': True,
-            'deployment_id': cluster_db.id
+            'deployment_id': cluster_db.id,
         }
 
         cluster_attrs = cluster_db.attributes.merged_attrs_values()
@@ -199,7 +199,7 @@ class TestHandlers(BaseIntegrationTest):
         deployment_msg['args']['deployment_info'] = deployment_info
 
         provision_nodes = []
-        admin_net = self.env.network_manager.get_admin_network()
+        admin_net = self.env.network_manager().get_admin_network()
 
         for n in sorted(self.env.nodes, key=lambda n: n.id):
             pnd = {
@@ -474,7 +474,7 @@ class TestHandlers(BaseIntegrationTest):
             headers=self.default_headers
         )
 
-        main_iface_id = self.env.network_manager.get_main_nic(
+        main_iface_id = self.env.network_manager().get_main_nic(
             node_db.id
         )
         main_iface_db = self.db.query(NodeNICInterface).get(

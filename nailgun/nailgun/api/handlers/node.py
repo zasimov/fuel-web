@@ -53,9 +53,7 @@ class NodeHandler(JSONHandler):
         json_data = None
         try:
             json_data = JSONHandler.render(instance, fields=cls.fields)
-            network_manager = NetworkManager()
-            json_data['network_data'] = network_manager.get_node_networks(
-                instance.id)
+            json_data['network_data'] = instance.network_data
         except Exception:
             logger.error(traceback.format_exc())
         return json_data
@@ -228,6 +226,7 @@ class NodeCollectionHandler(JSONHandler):
         db().commit()
 
         network_manager = NetworkManager()
+
         # Add interfaces for node from 'meta'.
         if node.meta and node.meta.get('interfaces'):
             network_manager.update_interfaces_info(node.id)

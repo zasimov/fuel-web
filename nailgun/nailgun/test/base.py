@@ -72,7 +72,15 @@ class Environment(object):
         self.releases = []
         self.clusters = []
         self.nodes = []
-        self.network_manager = NetworkManager()
+        #self.network_manager = None
+
+    def network_manager(self, net_provider=Cluster.NET_PROVIDERS.NovaNet):
+        if net_provider == Cluster.NET_PROVIDERS.NovaNet:
+            from nailgun.network.manager import NovaNetworkManager
+            return NovaNetworkManager()
+        else:
+            from nailgun.network.manager import NeutronNetworkManager
+            return NeutronNetworkManager()
 
     def create(self, **kwargs):
         cluster = self.create_cluster(
@@ -141,7 +149,7 @@ class Environment(object):
         download_task = json.loads(resp.body)
         return self.db.query(Task).get(download_task['id'])
 
-    def create_cluster(self, api=True, exclude=None, **kwargs):
+    def create_cluster(self, api=True, exclude=None, neutron=False, **kwargs):
         cluster_data = {
             'name': 'cluster-api-' + str(randint(0, 1000000))
         }
@@ -151,6 +159,15 @@ class Environment(object):
             cluster_data['release'] = self.create_release(api=False).id
         else:
             cluster_data['release'] = self.create_release(api=False)
+        if neutron:
+            cluster_data['net_provider'] = Cluster.NET_PROVIDERS.Neutron
+            cluster_data['net_l23_provider'] = Cluster.NET_L23_PROVIDERS.OVS
+            cluster_data['net_l23_provider'] = Cluster.NET_L23_PROVIDERS.OVS
+            cluster_data['net_segmentation_type'] = \
+                Cluster.NET_SEGMENT_TYPES.vlan
+        else:
+            cluster_data['net_provider'] = Cluster.NET_PROVIDERS.NovaNet
+
         if exclude and isinstance(exclude, list):
             for ex in exclude:
                 try:
@@ -324,7 +341,7 @@ class Environment(object):
         interfaces = []
         allowed_networks = list(self.db.query(NetworkGroup).filter(
             NetworkGroup.id.in_(
-                self.network_manager.get_all_cluster_networkgroups(node_id)
+                NetworkManager().get_all_cluster_networkgroups(node_id)
             )
         ))
 

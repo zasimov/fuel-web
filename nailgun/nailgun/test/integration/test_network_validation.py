@@ -64,7 +64,7 @@ class TestHandlers(BaseIntegrationTest):
         )
         cluster = self.env.clusters[0]
         nets = self.env.generate_ui_networks(cluster.id)
-        admin_ng = self.env.network_manager.get_admin_network_group()
+        admin_ng = self.env.network_manager().get_admin_network_group()
         nets['networks'][-1]["cidr"] = admin_ng.cidr
         resp = self.update_networks(cluster.id, nets, expect_errors=True)
         self.assertEquals(resp.status, 202)
@@ -89,7 +89,7 @@ class TestHandlers(BaseIntegrationTest):
         )
         cluster = self.env.clusters[0]
         nets = self.env.generate_ui_networks(cluster.id)
-        admin_ng = self.env.network_manager.get_admin_network_group()
+        admin_ng = self.env.network_manager().get_admin_network_group()
         base = IPNetwork(admin_ng.cidr)
         base.prefixlen += 1
         start_range = str(base[0])

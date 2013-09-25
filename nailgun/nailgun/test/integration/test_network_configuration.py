@@ -149,7 +149,7 @@ class TestNetworkConfigurationHandlerHAMode(BaseIntegrationTest):
         super(TestNetworkConfigurationHandlerHAMode, self).setUp()
         cluster = self.env.create_cluster(api=True, mode='ha_compact')
         self.cluster = self.db.query(Cluster).get(cluster['id'])
-        self.net_manager = NetworkManager()
+        #self.net_manager = NetworkManager()
 
     def test_returns_management_vip_and_public_vip(self):
         url = reverse('NetworkConfigurationHandler',
@@ -159,8 +159,10 @@ class TestNetworkConfigurationHandlerHAMode(BaseIntegrationTest):
 
         self.assertEquals(
             resp['management_vip'],
-            self.net_manager.assign_vip(self.cluster.id, 'management'))
+            self.env.network_manager().assign_vip(self.cluster.id, 'management'))
+            #self.net_manager.assign_vip(self.cluster.id, 'management'))
 
         self.assertEquals(
             resp['public_vip'],
-            self.net_manager.assign_vip(self.cluster.id, 'public'))
+            self.env.network_manager().assign_vip(self.cluster.id, 'public'))
+            #self.net_manager.assign_vip(self.cluster.id, 'public'))

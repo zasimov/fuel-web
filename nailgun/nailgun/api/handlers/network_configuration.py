@@ -27,11 +27,8 @@ from nailgun.api.handlers.base import content_json
 from nailgun.api.handlers.base import JSONHandler
 from nailgun.api.handlers.tasks import TaskHandler
 from nailgun.api.models import Cluster
-from nailgun.api.models import NetworkConfiguration
 from nailgun.api.models import NetworkGroup
 from nailgun.api.models import Task
-from nailgun.api.serializers.network_configuration \
-    import NetworkConfigurationSerializer
 from nailgun.api.validators.network import NetworkConfigurationValidator
 from nailgun.db import db
 from nailgun.logger import logger
@@ -85,7 +82,6 @@ class NetworkConfigurationHandler(JSONHandler):
     """
 
     validator = NetworkConfigurationValidator
-    serializer = NetworkConfigurationSerializer
 
     @content_json
     def GET(self, cluster_id):
@@ -94,7 +90,7 @@ class NetworkConfigurationHandler(JSONHandler):
                * 404 (cluster not found in db)
         """
         cluster = self.get_object_or_404(Cluster, cluster_id)
-        return self.serializer.serialize_for_cluster(cluster)
+        return cluster.network_serializer.serialize_for_cluster(cluster)
 
     def PUT(self, cluster_id):
         """:returns: JSONized Task object.
@@ -112,7 +108,7 @@ class NetworkConfigurationHandler(JSONHandler):
                 if 'networks' in data:
                     self.validator.validate_networks_update(json.dumps(data))
 
-                NetworkConfiguration.update(cluster, data)
+                cluster.network_manager().update(cluster, data)
             except web.webapi.badrequest as exc:
                 TaskHelper.set_error(task.uuid, exc.data)
                 logger.error(traceback.format_exc())

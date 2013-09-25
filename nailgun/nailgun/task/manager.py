@@ -19,8 +19,6 @@ import traceback
 from nailgun.api.models import Cluster
 from nailgun.api.models import RedHatAccount
 from nailgun.api.models import Task
-from nailgun.api.serializers.network_configuration \
-    import NetworkConfigurationSerializer
 from nailgun.db import db
 from nailgun.errors import errors
 from nailgun.logger import logger
@@ -258,7 +256,7 @@ class DeploymentTaskManager(TaskManager):
 
     def check_before_deployment(self, supertask):
         # checking admin intersection with untagged
-        network_info = NetworkConfigurationSerializer\
+        network_info = self.cluster.network_serializer\
             .serialize_for_cluster(
                 self.cluster
             )

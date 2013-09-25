@@ -21,7 +21,6 @@ from sqlalchemy.sql import not_
 
 from nailgun.api.models import Cluster
 from nailgun.api.models import Network
-from nailgun.api.models import NetworkConfiguration
 from nailgun.api.models import NetworkGroup
 from nailgun.api.models import Release
 from nailgun.test.base import BaseIntegrationTest
@@ -54,6 +53,7 @@ class TestHandlers(BaseIntegrationTest):
             json.dumps({
                 'name': 'cluster-name',
                 'release': release_id,
+                'net_provider': 'NovaNet'
             }),
             headers=self.default_headers
         )
@@ -75,7 +75,7 @@ class TestHandlers(BaseIntegrationTest):
                 name="management",
                 cluster_id=clstr.id
             ).first()
-            NetworkConfiguration.update(
+            clstr.network_manager().update(
                 clstr,
                 {
                     "networks": [
@@ -167,6 +167,7 @@ class TestHandlers(BaseIntegrationTest):
             json.dumps({
                 'name': 'cluster-name',
                 'release': release.id,
+                'net_provider': 'NovaNet'
             }),
             headers=self.default_headers
         )

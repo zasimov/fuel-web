@@ -29,14 +29,11 @@ from nailgun.api.models import Attributes
 from nailgun.api.models import Cluster
 from nailgun.api.models import Node
 from nailgun.api.models import Release
-from nailgun.api.serializers.network_configuration \
-    import NetworkConfigurationSerializer
 from nailgun.api.validators.cluster import AttributesValidator
 from nailgun.api.validators.cluster import ClusterValidator
 from nailgun.db import db
 from nailgun.errors import errors
 from nailgun.logger import logger
-from nailgun.network.manager import NetworkManager
 from nailgun.task.manager import ClusterDeletionManager
 from nailgun.task.manager import DeploymentTaskManager
 
@@ -90,7 +87,7 @@ class ClusterHandler(JSONHandler):
         """
         cluster = self.get_object_or_404(Cluster, cluster_id)
         data = self.checked_data()
-        network_manager = NetworkManager()
+        network_manager = cluster.network_manager()
 
         for key, value in data.iteritems():
             if key == "nodes":
@@ -192,7 +189,9 @@ class ClusterCollectionHandler(JSONHandler):
         if net_provider == Cluster.NET_PROVIDERS.NovaNet:
             attr_copy('net_manager')
         else:
-            attrs_copy(['net_l23_provider', 'net_segment_type'])
+            #attrs_copy(['net_l23_provider', 'net_segment_type'])
+            attr_copy('net_segment_type')
+            setattr(cluster, 'net_l23_provider', Cluster.NET_L23_PROVIDERS.OVS)
         db().add(cluster)
         db().commit()
         attributes = Attributes(
@@ -202,7 +201,7 @@ class ClusterCollectionHandler(JSONHandler):
         )
         attributes.generate_fields()
 
-        net_manager = cluster.get_network_manager()
+        net_manager = cluster.network_manager()
         try:
             net_manager.create_network_groups(cluster.id)
 
@@ -266,7 +265,7 @@ class ClusterChangesHandler(JSONHandler):
 
         try:
             network_info = \
-                NetworkConfigurationSerializer.serialize_for_cluster(
+                cluster.network_serializer.serialize_for_cluster(
                     cluster
                 )
             logger.info(

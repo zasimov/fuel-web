@@ -88,7 +88,7 @@ class TestVerifyNetworkTaskManagers(BaseIntegrationTest):
         self.assertEquals(200, resp.status)
         nets = json.loads(resp.body)
 
-        admin_ng = self.env.network_manager.get_admin_network_group()
+        admin_ng = self.env.network_manager().get_admin_network_group()
 
         nets['networks'][-1]['cidr'] = admin_ng.cidr
 

@@ -54,7 +54,8 @@ class TestHandlers(BaseIntegrationTest):
             reverse('ClusterCollectionHandler'),
             params=json.dumps({
                 'name': yet_another_cluster_name,
-                'release': release.id
+                'release': release.id,
+                'net_provider': 'NovaNet'
             }),
             headers=self.default_headers
         )

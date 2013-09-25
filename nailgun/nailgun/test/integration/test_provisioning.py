@@ -62,7 +62,7 @@ class TestProvisioning(BaseIntegrationTest):
         cluster = self.env.clusters[0]
         cluster.clear_pending_changes()
 
-        self.env.network_manager.assign_ips = mock.MagicMock()
+        self.env.network_manager().assign_ips = mock.MagicMock()
         self.env.launch_deployment()
 
         self.env.refresh_nodes()
