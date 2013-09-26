@@ -21,7 +21,9 @@ from nailgun.api.models import NetworkGroup
 from nailgun.api.models import NeutronConfiguration
 from nailgun.api.models import Node
 from nailgun.db import db
+
 from nailgun.errors import errors
+from nailgun.logger import logger
 from nailgun.network.manager import NetworkManager
 from nailgun.settings import settings
 from nailgun.task.helpers import TaskHelper
@@ -60,9 +62,9 @@ class OrchestratorSerializer(object):
         """
 
         if cluster.net_provider == Cluster.NET_PROVIDERS.NovaNetwork:
-            return NovaNetworkSerializer.serialize_cluster(cluster)
+            return NovaNetworkSerializer.serialize_cluster(cls, cluster)
         else:
-            return NeutronNetworkSerializer.serialize_cluster(cluster)
+            return NeutronNetworkSerializer.serialize_cluster(cls, cluster)
 
     @classmethod
     def get_common_attrs(cls, cluster):
@@ -108,25 +110,6 @@ class OrchestratorSerializer(object):
             cls.node_list(nodes))
 
         return ctrl_nodes
-
-    @classmethod
-    def serialize_nodes(cls, nodes):
-        """Serialize node for each role.
-        For example if node has two roles then
-        in orchestrator will be passed two serialized
-        nodes.
-        """
-        serialized_nodes = []
-        for node in nodes:
-            for role in set(node.pending_roles + node.roles):
-                serialized_node = cls.serialize_node(node, role)
-                serialized_nodes.append(serialized_node)
-
-        return serialized_nodes
-
-    @classmethod
-    def serialize_node(cls, node, role):
-        pass
 
     @classmethod
     def node_list(cls, nodes):
@@ -201,20 +184,43 @@ class OrchestratorSerializer(object):
         return filter(lambda node: node['role'] not in roles, nodes)
 
 
-class NovaNetworkSerializer(OrchestratorSerializer):
+class NetworkSerializer(object):
 
     @classmethod
-    def serialize_cluster(cls, cluster):
+    def serialize_nodes(cls, nodes):
+        """Serialize node for each role.
+        For example if node has two roles then
+        in orchestrator will be passed two serialized
+        nodes.
+        """
+        serialized_nodes = []
+        for node in nodes:
+            for role in set(node.pending_roles + node.roles):
+                serialized_node = cls.serialize_node(node, role)
+                serialized_nodes.append(serialized_node)
+
+        return serialized_nodes
+
+    @classmethod
+    def serialize_node(cls, node, role):
+        pass
+
+
+class NovaNetworkSerializer(NetworkSerializer):
+
+    @classmethod
+    def serialize_cluster(cls, orch_serializer, cluster):
         """Method generates facts which
         through an orchestrator pass to puppet
         """
-        common_attrs = cls.get_common_attrs(cluster)
-        nodes = cls.serialize_nodes(cls.get_nodes_to_serialization(cluster))
+        common_attrs = orch_serializer.get_common_attrs(cluster)
+        nodes = cls.serialize_nodes(
+            orch_serializer.get_nodes_to_serialization(cluster))
 
         if cluster.net_manager == 'VlanManager':
             cls.add_vlan_interfaces(nodes)
 
-        cls.set_deployment_priorities(nodes)
+        orch_serializer.set_deployment_priorities(nodes)
 
         # Merge attributes of nodes with common attributes
         def merge(dict1, dict2):
@@ -401,17 +407,18 @@ class NovaNetworkSerializer(OrchestratorSerializer):
                 }
 
 
-class NeutronNetworkSerializer(OrchestratorSerializer):
+class NeutronNetworkSerializer(NetworkSerializer):
 
     @classmethod
-    def serialize_cluster(cls, cluster):
+    def serialize_cluster(cls, orch_serializer, cluster):
         """Method generates facts which
         through an orchestrator pass to puppet
         """
-        common_attrs = cls.get_common_attrs(cluster)
-        nodes = cls.serialize_nodes(cls.get_nodes_to_serialization(cluster))
+        common_attrs = orch_serializer.get_common_attrs(cluster)
+        nodes = cls.serialize_nodes(
+            orch_serializer.get_nodes_to_serialization(cluster))
 
-        cls.set_deployment_priorities(nodes)
+        orch_serializer.set_deployment_priorities(nodes)
 
         # Merge attributes of nodes with common attributes
         def merge(dict1, dict2):
@@ -436,6 +443,8 @@ class NeutronNetworkSerializer(OrchestratorSerializer):
 
     @classmethod
     def neutron_parameters(cls, cluster):
+        #cfg_table = db().query(NeutronConfiguration).get(
+        #    cluster.neutron_cfg_id)
         cfg_table = cluster.neutron_cfg
         config = cfg_table.parameters
 
@@ -454,10 +463,11 @@ class NeutronNetworkSerializer(OrchestratorSerializer):
         if gre:
             config['L2']['tunnel_id_ranges'] = cfg_table.segmentation_id_ranges
         elif vlan:
-            config['L2']['physnet2']['vlan_range'] = \
+            config['L2']['phys_nets']['physnet2']['bridge'] = "br-prv"
+            config['L2']['phys_nets']['physnet2']['vlan_range'] = \
                 cfg_table.segmentation_id_ranges
         config['L3']['use_namespaces'] = \
-            (cluster.release.operating_system == 'CentOS')
+            (cluster.release.operating_system != 'RHEL')
 
         return config
 

@@ -21,6 +21,7 @@ import netaddr
 from sqlalchemy.orm import ColumnProperty
 from sqlalchemy.orm import object_mapper
 
+from nailgun.api.models import Cluster
 from nailgun.api.models import NetworkGroup
 from nailgun.api.models import Node
 from nailgun.api.models import NodeNICInterface
@@ -393,6 +394,9 @@ class CheckNetworksTask(object):
 
     @classmethod
     def execute(self, task, data, check_admin_untagged=False):
+        if ('net_provider' in data) and data['net_provider'] == \
+                Cluster.NET_PROVIDERS.Neutron:
+            return
         # If not set in data then fetch from db
         if 'net_manager' in data:
             netmanager = data['net_manager']

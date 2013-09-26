@@ -612,7 +612,7 @@ class NeutronNetworkManager(NetworkManager):
 
         cluster_db = db().query(Cluster).get(cluster_id)
 
-        networks_metadata = cluster_db.release.networks_metadata
+        networks_metadata = cluster_db.release.networks_metadata['Neutron']
 
         admin_network_range = db().query(IPAddrRange).filter_by(
             network_group_id=self.get_admin_network_group_id()
@@ -678,7 +678,6 @@ class NeutronNetworkManager(NetworkManager):
             nw_group = NetworkGroup(
                 release=cluster_db.release.id,
                 name=network['name'],
-                access=network['access'],
                 cidr=str(new_net),
                 netmask=str(new_net.netmask),
                 gateway=str(new_net[1]),
@@ -903,7 +902,7 @@ class NovaNetworkManager(NetworkManager):
 
         cluster_db = db().query(Cluster).get(cluster_id)
 
-        networks_metadata = cluster_db.release.networks_metadata
+        networks_metadata = cluster_db.release.networks_metadata['NovaNetwork']
 
         admin_network_range = db().query(IPAddrRange).filter_by(
             network_group_id=self.get_admin_network_group_id()

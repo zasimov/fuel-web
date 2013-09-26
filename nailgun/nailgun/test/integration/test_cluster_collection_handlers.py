@@ -129,7 +129,7 @@ class TestHandlers(BaseIntegrationTest):
         release.name = u"release_name_" + str(release.version)
         release.description = u"release_desc" + str(release.version)
         release.operating_system = "CentOS"
-        release.networks_metadata = [
+        release.networks_metadata = {"NovaNetwork": [
             {
                 "name": "floating",
                 "pool": ["172.16.0.0/12"],
@@ -147,7 +147,7 @@ class TestHandlers(BaseIntegrationTest):
                 "name": "fixed",
                 "pool": ["10.0.0.0/8"]
             }
-        ]
+        ]}
         release.attributes_metadata = {
             "editable": {
                 "keystone": {

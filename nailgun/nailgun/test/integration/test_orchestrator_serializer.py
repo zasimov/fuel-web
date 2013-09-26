@@ -113,7 +113,7 @@ class TestOrchestratorSerializer(OrchestratorSerializerTestBase):
                           'node-%d.%s' % (node_db.id, settings.DNS_DOMAIN))
 
     def test_node_list(self):
-        node_list = self.serializer.node_list(self.cluster.nodes)
+        node_list = OrchestratorSerializer.node_list(self.cluster.nodes)
 
         # Check right nodes count with right roles
         self.assert_roles_flattened(node_list)
@@ -177,7 +177,7 @@ class TestOrchestratorSerializer(OrchestratorSerializerTestBase):
 
     def test_vlan_manager(self):
         cluster = self.create_env('multinode', 'VlanManager')
-        facts = self.serializer.serialize(cluster)
+        facts = OrchestratorSerializer.serialize(cluster)
 
         for fact in facts:
             self.assertEquals(fact['vlan_interface'], 'eth0')
@@ -215,7 +215,7 @@ class TestOrchestratorSerializer(OrchestratorSerializerTestBase):
 
             self.db.add(new_ip_range)
         self.db.commit()
-        facts = self.serializer.serialize(self.cluster)
+        facts = OrchestratorSerializer.serialize(self.cluster)
 
         for fact in facts:
             self.assertEquals(

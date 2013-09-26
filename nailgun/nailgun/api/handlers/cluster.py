@@ -207,10 +207,11 @@ class ClusterCollectionHandler(JSONHandler):
                 db_reconnect_interval=cfg_table.db_reconnect_interval,
                 base_mac=cfg_table.base_mac,
                 segmentation_type=cfg_table.segmentation_type,
-                segmentation_id_ranges=cfg_table.segmentation_id_ranges
+                segmentation_id_ranges=cfg_table.segmentation_id_ranges,
             )
             db().add(neutron_params)
-            setattr(cluster, 'net_manager', neutron_params.id)
+            db().commit()
+            setattr(cluster, 'neutron_cfg_id', neutron_params.id)
             db().commit()
         attributes.generate_fields()
 

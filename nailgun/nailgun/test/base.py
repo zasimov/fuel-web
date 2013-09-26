@@ -106,7 +106,9 @@ class Environment(object):
             'description': u"release_desc" + version,
             'operating_system': 'CensOS',
             'roles': self.get_default_roles(),
-            'networks_metadata': self.get_default_networks_metadata(),
+            'networks_metadata': {
+                'NovaNetwork': self.get_default_networks_metadata()
+            },
             'attributes_metadata': self.get_default_attributes_metadata(),
             'volumes_metadata': self.get_default_volumes_metadata()
         }

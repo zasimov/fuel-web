@@ -54,11 +54,11 @@ class TestHandlers(BaseIntegrationTest):
                 'version': release_version,
                 'description': release_description,
                 'operating_system': 'CentOS',
-                'networks_metadata': [
+                'networks_metadata': {'NovaNetwork': [
                     {"name": "floating", "access": "public"},
                     {"name": "fixed", "access": "private10"},
                     {"name": "storage", "access": "private192"}
-                ]
+                ]}
             }),
             headers=self.default_headers
         )
@@ -71,9 +71,9 @@ class TestHandlers(BaseIntegrationTest):
                 'version': release_version,
                 'description': release_description,
                 'operating_system': 'CentOS',
-                'networks_metadata': [
+                'networks_metadata': {'NovaNetwork': [
                     {"name": "fixed", "access": "private10"}
-                ]
+                ]}
             }),
             headers=self.default_headers,
             expect_errors=True
@@ -98,11 +98,11 @@ class TestHandlers(BaseIntegrationTest):
                 'version': release_version,
                 'description': release_description,
                 'operating_system': 'CentOS',
-                'networks_metadata': [
+                'networks_metadata': {'NovaNetwork': [
                     {"name": "floating", "access": "public"},
                     {"name": "fixed", "access": "private10"},
                     {"name": "storage", "access": "private192"}
-                ]
+                ]}
             }),
             headers=self.default_headers
         )
