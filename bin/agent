@@ -231,11 +231,14 @@ class NodeAgent
           fn = "/sys/block/#{bname}/queue/logical_block_size"
           block_size = File.read(fn).to_i if File.exist? fn
           block_size = 512 if block_size == 0
+          
           detailed_meta[:disks] << {
             :name => dname,
             :model => binfo[:model],
             :size => (binfo[:size].to_i * block_size),
-            :disk => _disk_path_by_name(dname) || dname
+            :disk => _disk_path_by_name(dname) || dname,
+            :approx_speed => disk_approx_speed(bname),
+            :is_ssd => is_ssd?(bname)
           }
         end
       end
@@ -250,6 +253,19 @@ class NodeAgent
     dn = "/dev/disk/by-path"
     basepath = Dir["#{dn}/**?"].find{|f| /\/#{name}$/.match(File.readlink(f))}
     basepath.split("/")[2..-1].join("/") if basepath
+  end
+
+  def is_ssd?(bname)
+    fn_ssd = "/sys/block/#{bname}/queue/rotational"
+    # 0 - ssd
+    # 1 - hdd
+    return File.read(fn).to_i == 0 if File.exist?(fn)
+
+    false
+  end
+
+  def disk_approx_speed(name)
+    `hdparm -t /dev/#{name} | tail -n 1 | awk '{split ($0,a," "); print $(NF-1)}'`
   end
 
   def _is_virtualbox
