@@ -861,18 +861,15 @@ class NeutronNetworkManager(NetworkManager):
     def update(self, cluster, network_configuration):
         if 'neutron_configuration' in network_configuration:
             cfg = network_configuration['neutron_configuration']
-            neutron_cfg_inst = NeutronConfiguration(
-                parameters=cfg,
-                predefined_networks=cfg['predefined_networks'],
-                base_mac=cfg['base_mac'],
-                segmentation_type=cfg['segmentation_type'],
-                segmentation_id_ranges=cfg['segmentation_id_ranges'],
-                public_network=cfg['public_network'],
-                db_reconnect_interval=cfg['db_reconnect_interval']
-            )
-            db().add(neutron_cfg_inst)
-            db().commit()
-            setattr(cluster, 'net_manager', neutron_cfg_inst.id)
+            nc_db = db().query(NeutronConfiguration).\
+                get(cluster.neutron_cfg_id)
+            setattr(nc_db, 'predefined_networks', cfg['predefined_networks'])
+            setattr(nc_db, 'base_mac', cfg['base_mac'])
+            setattr(nc_db, 'segmentation_type', cfg['segmentation_type'])
+            setattr(nc_db, 'segmentation_id_ranges',
+                    cfg['segmentation_id_ranges'])
+            setattr(nc_db, 'db_reconnect_interval',
+                    cfg['db_reconnect_interval'])
 
         if 'networks' in network_configuration:
             for ng in network_configuration['networks']:

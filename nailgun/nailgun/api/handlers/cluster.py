@@ -27,6 +27,7 @@ from nailgun.api.handlers.base import JSONHandler
 from nailgun.api.handlers.tasks import TaskHandler
 from nailgun.api.models import Attributes
 from nailgun.api.models import Cluster
+from nailgun.api.models import NeutronConfiguration
 from nailgun.api.models import Node
 from nailgun.api.models import Release
 from nailgun.api.validators.cluster import AttributesValidator
@@ -199,6 +200,14 @@ class ClusterCollectionHandler(JSONHandler):
             generated=cluster.release.attributes_metadata.get("generated"),
             cluster=cluster
         )
+        if net_provider == Cluster.NET_PROVIDERS.Neutron:
+            cfg_table = db().query(NeutronConfiguration).get(1)
+            neutron_params = NeutronConfiguration(
+                parameters=cfg_table.parameters
+            )
+            db().add(neutron_params)
+            setattr(cluster, 'net_manager', neutron_params.id)
+            db().commit()
         attributes.generate_fields()
 
         net_manager = cluster.network_manager()

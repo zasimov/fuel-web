@@ -18,6 +18,7 @@
 
 from nailgun.api.models import Cluster
 from nailgun.api.models import NetworkGroup
+from nailgun.api.models import NeutronConfiguration
 from nailgun.api.models import Node
 from nailgun.db import db
 from nailgun.errors import errors
@@ -57,6 +58,156 @@ class OrchestratorSerializer(object):
         """Method generates facts which
         through an orchestrator passes to puppet
         """
+
+        if cluster.net_provider == Cluster.NET_PROVIDERS.NovaNet:
+            return NovaNetworkSerializer.serialize_cluster(cluster)
+        else:
+            return NeutronNetworkSerializer.serialize_cluster(cluster)
+
+    @classmethod
+    def get_common_attrs(cls, cluster):
+        """Common attributes for all facts
+        """
+        attrs = cls.serialize_cluster_attrs(cluster)
+        attrs['nodes'] = cls.node_list(cls.get_nodes_to_serialization(cluster))
+
+        for node in attrs['nodes']:
+            if node['role'] in 'cinder':
+                attrs['use_cinder'] = True
+
+        return attrs
+
+    @classmethod
+    def serialize_cluster_attrs(cls, cluster):
+        if cluster.net_provider == Cluster.NET_PROVIDERS.NovaNet:
+            return NovaNetworkSerializer.serialize_cluster_attrs(cluster)
+        else:
+            return NeutronNetworkSerializer.serialize_cluster_attrs(cluster)
+
+    @classmethod
+    def get_nodes_to_serialization(cls, cluster):
+        """Nodes which need to serialize
+        """
+        return db().query(Node).filter(
+            and_(Node.cluster == cluster,
+                 False == Node.pending_deletion)).order_by(Node.id)
+
+    @classmethod
+    def controller_nodes(cls, cluster):
+        """Serialize nodes in same format
+        as cls.node_list do that but only
+        controller nodes.
+        """
+        nodes = cls.get_nodes_to_serialization(cluster)
+
+        # If role has more than one role
+        # then node_list return serialized node
+        # for each role
+        ctrl_nodes = filter(
+            lambda n: n['role'] == 'controller',
+            cls.node_list(nodes))
+
+        return ctrl_nodes
+
+    @classmethod
+    def serialize_nodes(cls, nodes):
+        """Serialize node for each role.
+        For example if node has two roles then
+        in orchestrator will be passed two serialized
+        nodes.
+        """
+        serialized_nodes = []
+        for node in nodes:
+            for role in set(node.pending_roles + node.roles):
+                serialized_node = cls.serialize_node(node, role)
+                serialized_nodes.append(serialized_node)
+
+        return serialized_nodes
+
+    @classmethod
+    def serialize_node(cls, node, role):
+        pass
+
+    @classmethod
+    def node_list(cls, nodes):
+        """Generate nodes list. Represents
+        as "nodes" parameter in facts.
+        """
+        node_list = []
+
+        for node in nodes:
+            network_data = node.network_data
+
+            for role in set(node.pending_roles + node.roles):
+                node_list.append({
+                    # Yes, uid is really should be a string
+                    'uid': str(node.id),
+                    'fqdn': node.fqdn,
+                    'name': TaskHelper.make_slave_name(node.id),
+                    'role': role,
+
+                    # Addresses
+                    'internal_address': cls.get_addr(network_data,
+                                                     'management')['ip'],
+                    'internal_netmask': cls.get_addr(network_data,
+                                                     'management')['netmask'],
+                    'storage_address': cls.get_addr(network_data,
+                                                    'storage')['ip'],
+                    'storage_netmask': cls.get_addr(network_data,
+                                                    'storage')['netmask'],
+                    'public_address': cls.get_addr(network_data,
+                                                   'public')['ip'],
+                    'public_netmask': cls.get_addr(network_data,
+                                                   'public')['netmask']})
+
+        return node_list
+
+    @classmethod
+    def get_addr(cls, network_data, name):
+        """Get addr for network by name
+        """
+        nets = filter(
+            lambda net: net['name'] == name,
+            network_data)
+
+        if not nets or 'ip' not in nets[0]:
+            raise errors.CanNotFindNetworkForNode(
+                'Cannot find network with name: %s' % name)
+
+        net = nets[0]['ip']
+        return {
+            'ip': str(IPNetwork(net).ip),
+            'netmask': str(IPNetwork(net).netmask)
+        }
+
+    @classmethod
+    def set_deployment_priorities(cls, nodes):
+        """Set priorities of deployment."""
+        prior = Priority()
+
+        for n in cls.by_role(nodes, 'controller'):
+            n['priority'] = prior.next
+
+        other_nodes_prior = prior.next
+        for n in cls.not_roles(nodes, 'controller'):
+            n['priority'] = other_nodes_prior
+
+    @classmethod
+    def by_role(cls, nodes, role):
+        return filter(lambda node: node['role'] == role, nodes)
+
+    @classmethod
+    def not_roles(cls, nodes, roles):
+        return filter(lambda node: node['role'] not in roles, nodes)
+
+
+class NovaNetworkSerializer(OrchestratorSerializer):
+
+    @classmethod
+    def serialize_cluster(cls, cluster):
+        """Method generates facts which
+        through an orchestrator pass to puppet
+        """
         common_attrs = cls.get_common_attrs(cluster)
         nodes = cls.serialize_nodes(cls.get_nodes_to_serialization(cluster))
 
@@ -74,19 +225,6 @@ class OrchestratorSerializer(object):
             nodes)
 
     @classmethod
-    def get_common_attrs(cls, cluster):
-        """Common attributes for all facts
-        """
-        attrs = cls.serialize_cluster_attrs(cluster)
-        attrs['nodes'] = cls.node_list(cls.get_nodes_to_serialization(cluster))
-
-        for node in attrs['nodes']:
-            if node['role'] in 'cinder':
-                attrs['use_cinder'] = True
-
-        return attrs
-
-    @classmethod
     def serialize_cluster_attrs(cls, cluster):
         """Cluster attributes
         """
@@ -98,14 +236,6 @@ class OrchestratorSerializer(object):
         attrs.update(cls.network_ranges(cluster))
 
         return attrs
-
-    @classmethod
-    def get_nodes_to_serialization(cls, cluster):
-        """Nodes which need to serialize
-        """
-        return db().query(Node).filter(
-            and_(Node.cluster == cluster,
-                 False == Node.pending_deletion)).order_by(Node.id)
 
     @classmethod
     def novanetwork_attrs(cls, cluster):
@@ -171,21 +301,6 @@ class OrchestratorSerializer(object):
         ]
 
     @classmethod
-    def serialize_nodes(cls, nodes):
-        """Serialize node for each role.
-        For example if node has two roles then
-        in orchestrator will be passed two serialized
-        nodes.
-        """
-        serialized_nodes = []
-        for node in nodes:
-            for role in set(node.pending_roles + node.roles):
-                serialized_node = cls.serialize_node(node, role)
-                serialized_nodes.append(serialized_node)
-
-        return serialized_nodes
-
-    @classmethod
     def serialize_node(cls, node, role):
         """Serialize node, then it will be
         merged with common attributes
@@ -193,7 +308,6 @@ class OrchestratorSerializer(object):
         network_data = node.network_data
         interfaces = cls.configure_interfaces(network_data)
         cls.__add_hw_interfaces(interfaces, node.meta['interfaces'])
-        network_scheme = cls.build_neutron_network_scheme(network_data)
         node_attrs = {
             # Yes, uid is really should be a string
             'uid': str(node.id),
@@ -206,66 +320,12 @@ class OrchestratorSerializer(object):
 
             # TODO (eli): need to remove, requried
             # for fucking fake thread only
-            'online': node.online,
-
-            'network_scheme': network_scheme
+            'online': node.online
         }
         node_attrs.update(cls.interfaces_list(network_data))
         #import pdb; pdb.set_trace()
 
         return node_attrs
-
-    @classmethod
-    def node_list(cls, nodes):
-        """Generate nodes list. Represents
-        as "nodes" parameter in facts.
-        """
-        node_list = []
-
-        for node in nodes:
-            network_data = node.network_data
-
-            for role in set(node.pending_roles + node.roles):
-                node_list.append({
-                    # Yes, uid is really should be a string
-                    'uid': str(node.id),
-                    'fqdn': node.fqdn,
-                    'name': TaskHelper.make_slave_name(node.id),
-                    'role': role,
-
-                    # Addresses
-                    'internal_address': cls.get_addr(network_data,
-                                                     'management')['ip'],
-                    'internal_netmask': cls.get_addr(network_data,
-                                                     'management')['netmask'],
-                    'storage_address': cls.get_addr(network_data,
-                                                    'storage')['ip'],
-                    'storage_netmask': cls.get_addr(network_data,
-                                                    'storage')['netmask'],
-                    'public_address': cls.get_addr(network_data,
-                                                   'public')['ip'],
-                    'public_netmask': cls.get_addr(network_data,
-                                                   'public')['netmask']})
-
-        return node_list
-
-    @classmethod
-    def get_addr(cls, network_data, name):
-        """Get addr for network by name
-        """
-        nets = filter(
-            lambda net: net['name'] == name,
-            network_data)
-
-        if not nets or 'ip' not in nets[0]:
-            raise errors.CanNotFindNetworkForNode(
-                'Cannot find network with name: %s' % name)
-
-        net = nets[0]['ip']
-        return {
-            'ip': str(IPNetwork(net).ip),
-            'netmask': str(IPNetwork(net).netmask)
-        }
 
     @classmethod
     def interfaces_list(cls, network_data):
@@ -279,6 +339,127 @@ class OrchestratorSerializer(object):
                     network.get('vlan'))
 
         return interfaces
+
+    @classmethod
+    def configure_interfaces(cls, network_data):
+        """Configre interfaces
+        """
+        interfaces = {}
+        for network in network_data:
+            network_name = network['name']
+
+            # floating and public are on the same interface
+            # so, just skip floating
+            if network_name == 'floating':
+                continue
+
+            name = cls.__make_interface_name(network.get('dev'),
+                                             network.get('vlan'))
+
+            if name not in interfaces:
+                interfaces[name] = {
+                    'interface': name,
+                    'ipaddr': [],
+                    '_name': network_name}
+
+            interface = interfaces[name]
+
+            if network_name == 'admin':
+                interface['ipaddr'] = 'dhcp'
+            elif network.get('ip'):
+                interface['ipaddr'].append(network.get('ip'))
+
+            # Add gateway for public
+            if network_name == 'public' and network.get('gateway'):
+                interface['gateway'] = network['gateway']
+
+            if len(interface['ipaddr']) == 0:
+                interface['ipaddr'] = 'none'
+
+        interfaces['lo'] = {'interface': 'lo', 'ipaddr': ['127.0.0.1/8']}
+
+        return interfaces
+
+    @classmethod
+    def __make_interface_name(cls, name, vlan):
+        """Make interface name
+        """
+        if name and vlan:
+            return '.'.join([name, str(vlan)])
+        return name
+
+    @classmethod
+    def __add_hw_interfaces(cls, interfaces, hw_interfaces):
+        """Add interfaces which not represents in
+        interfaces list but they are represented on node
+        """
+        for hw_interface in hw_interfaces:
+            if hw_interface['name'] not in interfaces:
+                interfaces[hw_interface['name']] = {
+                    'interface': hw_interface['name'],
+                    'ipaddr': "none"
+                }
+
+
+class NeutronNetworkSerializer(OrchestratorSerializer):
+
+    @classmethod
+    def serialize_cluster(cls, cluster):
+        """Method generates facts which
+        through an orchestrator pass to puppet
+        """
+        common_attrs = cls.get_common_attrs(cluster)
+        nodes = cls.serialize_nodes(cls.get_nodes_to_serialization(cluster))
+
+        cls.set_deployment_priorities(nodes)
+
+        # Merge attributes of nodes with common attributes
+        def merge(dict1, dict2):
+            return dict(dict1.items() + dict2.items())
+
+        return map(
+            lambda node: merge(node, common_attrs),
+            nodes)
+
+    @classmethod
+    def serialize_cluster_attrs(cls, cluster):
+        """Cluster attributes
+        """
+        attrs = cluster.attributes.merged_attrs_values()
+        attrs['deployment_mode'] = cluster.mode
+        attrs['deployment_id'] = cluster.id
+        attrs['master_ip'] = settings.MASTER_IP
+        attrs['neutron_parameters'] = cls.neutron_parameters(cluster)
+        #attrs.update(cls.network_ranges(cluster))
+
+        return attrs
+
+    @classmethod
+    def neutron_parameters(cls, cluster):
+        cfg_table = cluster.neutron_cfg
+        config = cfg_table.parameters
+
+        config['predefined_networks'] = cfg_table.predefined_networks
+
+        config['database']['reconnect_interval'] = \
+            cfg_table.db_reconnect_interval
+
+        gre = (cfg_table.segmentation_type ==
+               NeutronConfiguration.SEGMENTATION_TYPES.gre)
+        vlan = (cfg_table.segmentation_type ==
+                NeutronConfiguration.SEGMENTATION_TYPES.vlan)
+        config['L2']['base_mac'] = cfg_table.base_mac
+        config['L2']['segmentation_type'] = cfg_table.segmentation_type
+        config['L2']['enable_tunneling'] = gre
+        if gre:
+            config['L2']['tunnel_id_ranges'] = cfg_table.segmentation_id_ranges
+        elif vlan:
+            config['L2']['physnet2']['vlan_range'] = \
+                cfg_table.segmentation_id_ranges
+        config['L3']['use_namespaces'] = \
+            (cluster.release.operating_system == 'CentOS')
+
+        return config
 
     @classmethod
     def build_neutron_network_scheme(cls, network_data):
@@ -380,84 +561,33 @@ class OrchestratorSerializer(object):
         return network_scheme
 
     @classmethod
-    def configure_interfaces(cls, network_data):
-        """Configre interfaces
+    def serialize_node(cls, node, role):
+        """Serialize node, then it will be
+        merged with common attributes
         """
-        interfaces = {}
-        for network in network_data:
-            network_name = network['name']
+        network_data = node.network_data
+        #interfaces = cls.configure_interfaces(network_data)
+        #cls.__add_hw_interfaces(interfaces, node.meta['interfaces'])
+        network_scheme = cls.build_neutron_network_scheme(network_data)
+        node_attrs = {
+            # Yes, uid is really should be a string
+            'uid': str(node.id),
+            'fqdn': node.fqdn,
+            'status': node.status,
+            'role': role,
 
-            # floating and public are on the same interface
-            # so, just skip floating
-            if network_name == 'floating':
-                continue
+            # Interfaces assingment
+            #'network_data': interfaces,
 
-            name = cls.__make_interface_name(network.get('dev'),
-                                             network.get('vlan'))
+            # TODO (eli): need to remove, requried
+            # for fucking fake thread only
+            'online': node.online,
 
-            if name not in interfaces:
-                interfaces[name] = {
-                    'interface': name,
-                    'ipaddr': [],
-                    '_name': network_name}
+            'network_scheme': network_scheme
+        }
+        #node_attrs.update(cls.interfaces_list(network_data))
 
-            interface = interfaces[name]
-
-            if network_name == 'admin':
-                interface['ipaddr'] = 'dhcp'
-            elif network.get('ip'):
-                interface['ipaddr'].append(network.get('ip'))
-
-            # Add gateway for public
-            if network_name == 'public' and network.get('gateway'):
-                interface['gateway'] = network['gateway']
-
-            if len(interface['ipaddr']) == 0:
-                interface['ipaddr'] = 'none'
-
-        interfaces['lo'] = {'interface': 'lo', 'ipaddr': ['127.0.0.1/8']}
-
-        return interfaces
-
-    @classmethod
-    def by_role(cls, nodes, role):
-        return filter(lambda node: node['role'] == role, nodes)
-
-    @classmethod
-    def not_roles(cls, nodes, roles):
-        return filter(lambda node: node['role'] not in roles, nodes)
-
-    @classmethod
-    def set_deployment_priorities(cls, nodes):
-        """Set priorities of deployment."""
-        prior = Priority()
-
-        for n in cls.by_role(nodes, 'controller'):
-            n['priority'] = prior.next
-
-        other_nodes_prior = prior.next
-        for n in cls.not_roles(nodes, 'controller'):
-            n['priority'] = other_nodes_prior
-
-    @classmethod
-    def __make_interface_name(cls, name, vlan):
-        """Make interface name
-        """
-        if name and vlan:
-            return '.'.join([name, str(vlan)])
-        return name
-
-    @classmethod
-    def __add_hw_interfaces(cls, interfaces, hw_interfaces):
-        """Add interfaces which not represents in
-        interfaces list but they are represented on node
-        """
-        for hw_interface in hw_interfaces:
-            if hw_interface['name'] not in interfaces:
-                interfaces[hw_interface['name']] = {
-                    'interface': hw_interface['name'],
-                    'ipaddr': "none"
-                }
+        return node_attrs
 
 
 class OrchestratorHASerializer(OrchestratorSerializer):

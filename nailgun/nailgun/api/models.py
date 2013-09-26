@@ -193,6 +193,8 @@ class Cluster(Base):
     notifications = relationship("Notification", backref="cluster")
     network_groups = relationship("NetworkGroup", backref="cluster",
                                   cascade="delete")
+    neutron_cfg = relationship("NeutronConfiguration", backref="cluster",
+                               cascade="delete")
     replaced_deployment_info = Column(JSON, default={})
     replaced_provisioning_info = Column(JSON, default={})
 
@@ -882,7 +884,7 @@ class NeutronConfiguration(Base):
     Neutron сonfiguration settings
     """
     __tablename__ = 'neutron_configuration'
-    SEGMENTATION_TYPES = ('vlan', 'gre')
+    SEGMENTATION_TYPES = enum('vlan', 'gre')
 
     id = Column(Integer, primary_key=True)
 
@@ -901,6 +903,3 @@ class NeutronConfiguration(Base):
     segmentation_id_ranges = Column(String(25), nullable=False)
     #"1:65534" for GRE , "2:4094" for vlan
     #affects 'network_vlan_ranges', 'tunnel_id_ranges' parameters
-    # L3 parameters
-    local_ip = Column(String(25), nullable=False) #"10.108.0.XXX",  # must be configured from network role if GRE
-    public_network = Column(String(25), nullable=False) #"net04_ext", # in "predefined_networks" with public==true

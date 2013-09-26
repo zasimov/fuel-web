@@ -24,6 +24,8 @@ from nailgun.orchestrator.deployment_serializers \
     import OrchestratorHASerializer
 from nailgun.orchestrator.deployment_serializers \
     import OrchestratorSerializer
+from nailgun.orchestrator.deployment_serializers \
+    import NovaNetworkSerializer
 from nailgun.settings import settings
 from nailgun.test.base import BaseIntegrationTest
 
@@ -73,7 +75,7 @@ class TestOrchestratorSerializer(OrchestratorSerializerTestBase):
 
     @property
     def serializer(self):
-        return OrchestratorSerializer
+        return NovaNetworkSerializer
 
     def assert_roles_flattened(self, nodes):
         self.assertEquals(len(nodes), 6)
