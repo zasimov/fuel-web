@@ -55,7 +55,7 @@ class TestHandlers(BaseIntegrationTest):
             params=json.dumps({
                 'name': yet_another_cluster_name,
                 'release': release.id,
-                'net_provider': 'NovaNet'
+                'net_provider': 'NovaNetwork'
             }),
             headers=self.default_headers
         )

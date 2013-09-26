@@ -53,7 +53,7 @@ class TestHandlers(BaseIntegrationTest):
             json.dumps({
                 'name': 'cluster-name',
                 'release': release_id,
-                'net_provider': 'NovaNet'
+                'net_provider': 'NovaNetwork'
             }),
             headers=self.default_headers
         )
@@ -167,7 +167,7 @@ class TestHandlers(BaseIntegrationTest):
             json.dumps({
                 'name': 'cluster-name',
                 'release': release.id,
-                'net_provider': 'NovaNet'
+                'net_provider': 'NovaNetwork'
             }),
             headers=self.default_headers
         )

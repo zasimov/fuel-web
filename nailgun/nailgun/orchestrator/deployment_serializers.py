@@ -59,7 +59,7 @@ class OrchestratorSerializer(object):
         through an orchestrator passes to puppet
         """
 
-        if cluster.net_provider == Cluster.NET_PROVIDERS.NovaNet:
+        if cluster.net_provider == Cluster.NET_PROVIDERS.NovaNetwork:
             return NovaNetworkSerializer.serialize_cluster(cluster)
         else:
             return NeutronNetworkSerializer.serialize_cluster(cluster)
@@ -79,7 +79,7 @@ class OrchestratorSerializer(object):
 
     @classmethod
     def serialize_cluster_attrs(cls, cluster):
-        if cluster.net_provider == Cluster.NET_PROVIDERS.NovaNet:
+        if cluster.net_provider == Cluster.NET_PROVIDERS.NovaNetwork:
             return NovaNetworkSerializer.serialize_cluster_attrs(cluster)
         else:
             return NeutronNetworkSerializer.serialize_cluster_attrs(cluster)
@@ -634,7 +634,7 @@ class OrchestratorHASerializer(OrchestratorSerializer):
         common_attrs = super(OrchestratorHASerializer, cls).get_common_attrs(
             cluster)
 
-        if cluster.net_provider == Cluster.NET_PROVIDERS.NovaNet:
+        if cluster.net_provider == Cluster.NET_PROVIDERS.NovaNetwork:
             netmanager = cluster.network_manager()
             common_attrs['management_vip'] = netmanager.assign_vip(
                 cluster.id, 'management')

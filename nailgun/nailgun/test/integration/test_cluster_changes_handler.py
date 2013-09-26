@@ -284,7 +284,6 @@ class TestHandlers(BaseIntegrationTest):
         self.assertEquals(len(args), 2)
         self.assertEquals(len(args[1]), 2)
         self.datadiff(args[1][0], provision_msg)
-        #print str(deployment_msg)
         self.datadiff(args[1][1], deployment_msg)
 
     @fake_tasks(fake_rpc=False, mock_rpc=False)

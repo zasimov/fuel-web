@@ -74,8 +74,8 @@ class Environment(object):
         self.nodes = []
         #self.network_manager = None
 
-    def network_manager(self, net_provider=Cluster.NET_PROVIDERS.NovaNet):
-        if net_provider == Cluster.NET_PROVIDERS.NovaNet:
+    def network_manager(self, net_provider=Cluster.NET_PROVIDERS.NovaNetwork):
+        if net_provider == Cluster.NET_PROVIDERS.NovaNetwork:
             from nailgun.network.manager import NovaNetworkManager
             return NovaNetworkManager()
         else:
@@ -161,12 +161,12 @@ class Environment(object):
             cluster_data['release'] = self.create_release(api=False)
         if neutron:
             cluster_data['net_provider'] = Cluster.NET_PROVIDERS.Neutron
-            cluster_data['net_l23_provider'] = Cluster.NET_L23_PROVIDERS.OVS
-            cluster_data['net_l23_provider'] = Cluster.NET_L23_PROVIDERS.OVS
+            cluster_data['net_l23_provider'] = Cluster.NET_L23_PROVIDERS.ovs
+            cluster_data['net_l23_provider'] = Cluster.NET_L23_PROVIDERS.ovs
             cluster_data['net_segmentation_type'] = \
                 Cluster.NET_SEGMENT_TYPES.vlan
         else:
-            cluster_data['net_provider'] = Cluster.NET_PROVIDERS.NovaNet
+            cluster_data['net_provider'] = Cluster.NET_PROVIDERS.NovaNetwork
 
         if exclude and isinstance(exclude, list):
             for ex in exclude:

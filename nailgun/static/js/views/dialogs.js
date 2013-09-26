@@ -368,9 +368,9 @@ function(require, utils, models, simpleMessageTemplate, createClusterWizardTempl
             } else {
                 cluster.set({net_provider: 'Neutron'});
                 if (manager == 'neutron-gre') {
-                    cluster.set({net_segment_type: 'GRE'});
+                    cluster.set({net_segment_type: 'gre'});
                 } else if (manager == 'neutron-vlan') {
-                    cluster.set({net_segment_type: 'VLAN'});
+                    cluster.set({net_segment_type: 'vlan'});
                 }
             }
             return (new $.Deferred()).resolve();

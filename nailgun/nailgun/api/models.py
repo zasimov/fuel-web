@@ -134,8 +134,8 @@ class Cluster(Base):
     STATUSES = enum('new', 'deployment', 'operational', 'error', 'remove')
     NET_MANAGERS = enum('FlatDHCPManager', 'VlanManager')
     GROUPING = enum('roles', 'hardware', 'both')
-    NET_PROVIDERS = enum('NovaNet', 'Neutron')
-    NET_L23_PROVIDERS = enum('OVS')
+    NET_PROVIDERS = enum('NovaNetwork', 'Neutron')
+    NET_L23_PROVIDERS = enum('ovs')
     NET_SEGMENT_TYPES = enum('none', 'vlan', 'gre')
     id = Column(Integer, primary_key=True)
     mode = Column(
@@ -151,12 +151,12 @@ class Cluster(Base):
     net_provider = Column(
         Enum(*NET_PROVIDERS._asdict().values(), name='net_provider'),
         nullable=False,
-        default=NET_PROVIDERS.NovaNet
+        default=NET_PROVIDERS.NovaNetwork
     )
     net_l23_provider = Column(
         Enum(*NET_L23_PROVIDERS._asdict().values(), name='net_l23_provider'),
         nullable=False,
-        default=NET_L23_PROVIDERS.OVS
+        default=NET_L23_PROVIDERS.ovs
     )
     net_segmentation_type = Column(
         Enum(*NET_SEGMENT_TYPES._asdict().values(),
@@ -224,7 +224,7 @@ class Cluster(Base):
 
     @property
     def network_manager(self):
-        if self.net_provider == Cluster.NET_PROVIDERS.NovaNet:
+        if self.net_provider == Cluster.NET_PROVIDERS.NovaNetwork:
             from nailgun.network.manager import NovaNetworkManager
             return NovaNetworkManager
         from nailgun.network.manager import NeutronNetworkManager
@@ -232,7 +232,7 @@ class Cluster(Base):
 
     @property
     def network_serializer(self):
-        if self.net_provider == Cluster.NET_PROVIDERS.NovaNet:
+        if self.net_provider == Cluster.NET_PROVIDERS.NovaNetwork:
             from nailgun.api.serializers.network_configuration \
                 import NovaNetworkConfigurationSerializer
             return NovaNetworkConfigurationSerializer
@@ -894,7 +894,7 @@ class NeutronConfiguration(Base):
     # DB parameters
     db_reconnect_interval = Column(Integer) #in seconds
     # Metadata parameters
-    metadata_proxy_shared_secret = Column(String(100), nullable=False)
+    metadata_proxy_shared_secret = Column(String(100), nullable=True)
     # L2 parameters
     base_mac = Column(String(100), nullable=False) #"fa:16:3e:00:00:00",
     segmentation_type = Column(Enum(*SEGMENTATION_TYPES,

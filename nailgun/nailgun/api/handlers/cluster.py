@@ -187,12 +187,12 @@ class ClusterCollectionHandler(JSONHandler):
         net_provider = attr_copy('net_provider')
         if net_provider not in Cluster.NET_PROVIDERS:
             raise web.badrequest('Undefined network provider')
-        if net_provider == Cluster.NET_PROVIDERS.NovaNet:
+        if net_provider == Cluster.NET_PROVIDERS.NovaNetwork:
             attr_copy('net_manager')
         else:
             #attrs_copy(['net_l23_provider', 'net_segment_type'])
             attr_copy('net_segment_type')
-            setattr(cluster, 'net_l23_provider', Cluster.NET_L23_PROVIDERS.OVS)
+            setattr(cluster, 'net_l23_provider', Cluster.NET_L23_PROVIDERS.ovs)
         db().add(cluster)
         db().commit()
         attributes = Attributes(
@@ -203,7 +203,11 @@ class ClusterCollectionHandler(JSONHandler):
         if net_provider == Cluster.NET_PROVIDERS.Neutron:
             cfg_table = db().query(NeutronConfiguration).get(1)
             neutron_params = NeutronConfiguration(
-                parameters=cfg_table.parameters
+                parameters=cfg_table.parameters,
+                db_reconnect_interval=cfg_table.db_reconnect_interval,
+                base_mac=cfg_table.base_mac,
+                segmentation_type=cfg_table.segmentation_type,
+                segmentation_id_ranges=cfg_table.segmentation_id_ranges
             )
             db().add(neutron_params)
             setattr(cluster, 'net_manager', neutron_params.id)

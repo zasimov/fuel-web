@@ -94,7 +94,11 @@
                     }
                 },
                 "root_helper": "sudo quantum-rootwrap /etc/quantum/rootwrap.conf"
-            }
+            },
+            "db_reconnect_interval": 2,
+            "base_mac": "fa:16:3e:00:00:00",
+            "segmentation_type": "vlan",
+            "segmentation_id_ranges": "1000:2999"
         }
     }
 ]
