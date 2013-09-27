@@ -208,7 +208,7 @@ class ClusterCollectionHandler(JSONHandler):
                     'predefined_networks'],
                 db_reconnect_interval=cfg_table.db_reconnect_interval,
                 base_mac=cfg_table.base_mac,
-                segmentation_type=cluster.net_segment_type,
+                segmentation_type=data['net_segment_type'],
                 segmentation_id_ranges=cfg_table.segmentation_id_ranges,
             )
             db().add(neutron_params)
