@@ -864,7 +864,7 @@ class NeutronNetworkManager(NetworkManager):
                 get(cluster.neutron_cfg_id)
             setattr(nc_db, 'predefined_networks', cfg['predefined_networks'])
             setattr(nc_db, 'base_mac', cfg['base_mac'])
-            setattr(nc_db, 'segmentation_type', cfg['segmentation_type'])
+            #setattr(nc_db, 'segmentation_type', cfg['segmentation_type'])
             setattr(nc_db, 'segmentation_id_ranges',
                     cfg['segmentation_id_ranges'])
             setattr(nc_db, 'db_reconnect_interval',

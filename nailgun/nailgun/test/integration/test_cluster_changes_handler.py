@@ -84,6 +84,8 @@ class TestHandlers(BaseIntegrationTest):
         }
 
         cluster_attrs = cluster_db.attributes.merged_attrs_values()
+        if 'neutron' in cluster_attrs:
+            del cluster_attrs['neutron']
         common_attrs.update(cluster_attrs)
 
         # Common attrs calculation

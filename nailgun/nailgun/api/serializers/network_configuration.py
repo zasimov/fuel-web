@@ -55,6 +55,7 @@ class NovaNetworkConfigurationSerializer(BasicSerializer):
                     )
         return result
 
+
 class NeutronNetworkConfigurationSerializer(BasicSerializer):
 
     fields = ('id', 'cluster_id', 'name', 'cidr', 'netmask', 'gateway',
@@ -80,4 +81,12 @@ class NeutronNetworkConfigurationSerializer(BasicSerializer):
             cls.serialize_network_group,
             cluster.network_groups
         )
+        result['neutron_parameters'] = {
+            'predefined_networks': cluster.neutron_cfg.predefined_networks,
+            'db_reconnect_interval': cluster.neutron_cfg.db_reconnect_interval,
+            'base_mac': cluster.neutron_cfg.base_mac,
+            'segmentation_type': cluster.neutron_cfg.segmentation_type,
+            'segmentation_id_ranges':
+                cluster.neutron_cfg.segmentation_id_ranges
+        }
         return result

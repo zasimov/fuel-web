@@ -90,17 +90,35 @@
                 },
                 "predefined_networks": {
                     "net04_ext": {
-                        "subnet": "10.100.100.0/24",
-                        "gateway": "10.100.100.1",
-                        "nameservers": ["8.8.4.4", "8.8.8.8"],
-                        "public": true,
-                        "floating": "10.100.100.130:10.100.100.254"
+                        "shared": false,
+                        "L2": {
+                            "router_ext": true,
+                            "network_type": "flat",
+                            "physnet": "physnet1",
+                            "segment_id": null
+                        },
+                        "L3": {
+                            "subnet": "10.100.100.0/24",
+                            "gateway": "10.100.100.1",
+                            "nameservers": [],
+                            "public": true,
+                            "floating": "10.100.100.130:10.100.100.254"
+                        }
                     },
                     "net04": {
-                        "subnet": "192.168.111.0/24",
-                        "nameservers": [],
-                        "public": false,
-                        "floating": null
+                        "L2": {
+                            "router_ext": false,
+                            "network_type": "gre",
+                            "physnet": "physnet2",
+                            "segment_id": null
+                        },
+                        "L3": {
+                            "subnet": "192.168.111.0/24",
+                            "gateway": null,
+                            "nameservers": ["8.8.4.4", "8.8.8.8"],
+                            "public": false,
+                            "floating": null
+                        }
                     }
                 },
                 "root_helper": "sudo quantum-rootwrap /etc/quantum/rootwrap.conf"

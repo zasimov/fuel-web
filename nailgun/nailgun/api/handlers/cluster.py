@@ -204,9 +204,11 @@ class ClusterCollectionHandler(JSONHandler):
             cfg_table = db().query(NeutronConfiguration).get(1)
             neutron_params = NeutronConfiguration(
                 parameters=cfg_table.parameters,
+                predefined_networks=cfg_table.parameters[
+                    'predefined_networks'],
                 db_reconnect_interval=cfg_table.db_reconnect_interval,
                 base_mac=cfg_table.base_mac,
-                segmentation_type=cfg_table.segmentation_type,
+                segmentation_type=cluster.net_segment_type,
                 segmentation_id_ranges=cfg_table.segmentation_id_ranges,
             )
             db().add(neutron_params)

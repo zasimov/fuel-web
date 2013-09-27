@@ -240,6 +240,8 @@ class NovaNetworkSerializer(NetworkSerializer):
         attrs['master_ip'] = settings.MASTER_IP
         attrs['novanetwork_parameters'] = cls.novanetwork_attrs(cluster)
         attrs.update(cls.network_ranges(cluster))
+        if 'neutron' in attrs:
+            del attrs['neutron']
 
         return attrs
 
@@ -438,6 +440,9 @@ class NeutronNetworkSerializer(NetworkSerializer):
         attrs['master_ip'] = settings.MASTER_IP
         attrs['neutron_parameters'] = cls.neutron_parameters(cluster)
         #attrs.update(cls.network_ranges(cluster))
+        if 'neutron' in attrs:
+            attrs['neutron_parameters']['metadata'].update(attrs['neutron'])
+            del attrs['neutron']
 
         return attrs
 

@@ -444,6 +444,11 @@
                             "generator": "identical",
                             "generator_arg": "centos-x86_64"
                         }
+                    },
+                    "neutron": {
+                        "metadata_proxy_shared_secret": {
+                            "generator": "password"
+                        }
                     }
                 }
             }
@@ -804,6 +809,11 @@
                         "profile": {
                             "generator": "identical",
                             "generator_arg": "rhel-x86_64"
+                        }
+                    },
+                    "neutron": {
+                        "metadata_proxy_shared_secret": {
+                            "generator": "password"
                         }
                     }
                 }
@@ -1227,6 +1237,11 @@
                         "profile": {
                             "generator": "identical",
                             "generator_arg": "ubuntu_1204_x86_64"
+                        }
+                    },
+                    "neutron": {
+                        "metadata_proxy_shared_secret": {
+                            "generator": "password"
                         }
                     }
                 }
