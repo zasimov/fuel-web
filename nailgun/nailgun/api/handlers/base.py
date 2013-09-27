@@ -16,7 +16,7 @@
 
 from datetime import datetime
 from decorator import decorator
-import json
+import ujson as json
 
 import web
 
@@ -59,7 +59,7 @@ def content_json(func, *args, **kwargs):
 def build_json_response(data):
     web.header('Content-Type', 'application/json')
     if type(data) in (dict, list):
-        return json.dumps(data, indent=4)
+        return json.dumps(data)
     return data
 
 
