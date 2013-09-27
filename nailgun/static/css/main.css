@@ -513,7 +513,7 @@ h6.page-title {
   height: 48px;
   float: left;
   padding: 8px 0px 0px 11px;
-  border-right: 1px dotted #a0a0a0;
+  /* border-right: 1px dotted #a0a0a0; */
   box-sizing: border-box;
   -moz-box-sizing: border-box;
   -webkit-box-sizing: border-box;
@@ -523,10 +523,11 @@ h6.page-title {
   -o-transition: all 0.3s ease;
   -ms-transition: all 0.3s ease;
 }
-.node-logo {
-  width: 64px;
-  float: left;
+
+label.node-checkbox {
+  display: block; width: 100%; height: 45px; margin-top: -49px; margin-left: 2px; background: none;
 }
+
 .node-name {/* width: 320px; float: left; */
   -webkit-font-smoothing: antialiased;
   height: 50px;
@@ -575,6 +576,7 @@ h6.page-title {
   text-transform: uppercase;
   font-size: 10px;
   margin: 14px 20px 0px 20px;
+  position: relative;
 }
 .node-status > .progress {
   background-color: #b9bdbf;
@@ -596,6 +598,12 @@ h6.page-title {
   margin: -4px 0 0 4px;
   text-align: left;
   text-shadow: none;
+}
+.node-discard-changes {
+  float: right;
+  position: relative;
+  margin-top: 12px;
+  width: 30px;
 }
 .node-hardware {
   width: 240px;
@@ -632,6 +640,7 @@ h6.page-title {
   background: url(/static/img/icons.png) 0px 0px no-repeat;
   margin: 13px 13px 0px 14px;
   cursor: pointer;
+  position: relative;
 }
 .node-details:hover {
   background: url(/static/img/icons.png) 0px -22px no-repeat;
@@ -812,15 +821,14 @@ h6.page-title {
 /* === Node Block End === */
 
 .node-logo {
-  display: block;
-  margin: 0px;
-  padding: 0px;
-  width: 60px;
-  height: 40px;
-  float: left;
-  box-sizing: border-box;
   -moz-box-sizing: border-box;
-  -webkit-box-sizing: border-box;
+    border-left: 1px dotted #A0A0A0;
+    display: block;
+    float: left;
+    height: 48px;
+    margin: 0 0 0 49px;
+    padding: 0;
+    width: 58px;
 }
 
 .node-renameable {
@@ -846,16 +854,12 @@ h6.page-title {
   font-size: 12px;
 }
 
-.node-status .logs-link, .node-status .btn-discard-node-changes {
-  display: block;
+.node-status .logs-link {
+    display: block;
     height: 25px;
     color: #2c67a0 !important;
     font-size: 9.5px !important;
     text-transform: uppercase;
-}
-
-.node-status .btn-discard-node-changes {
-    padding: 0;
 }
 
 .breaker {
@@ -2590,6 +2594,9 @@ h6.page-title {
 
 }
 
+.btn-discard-node-changes {
+  font-size: 13px;
+}
 
 .node-image-outline {
   display: block;
@@ -4241,7 +4248,7 @@ input.input-append {
   width: 22px;
   overflow: hidden;
   float: right;
-  background: url(/static/img/icons.png) 0px -44px no-repeat;
+  background: url(../img/icons.png) 0px -44px no-repeat;
   cursor: pointer;
 }
 
@@ -4433,4 +4440,72 @@ input.input-append {
 
 .compute-step .parameter-name {
   text-transform: uppercase;
+}
+
+.cluster-name-box {
+  display: block;
+  height: 38px;
+  margin: 0px;
+  padding: 0px;
+}
+
+.cluster-name-box > .nodes-list-name {
+  float: left;
+  margin: 0px;
+  padding: 0px;
+  height: 38px;
+}
+
+.nodes-list-name-status {
+  display: inline-block;
+  font-size: 16px;
+  line-height: 18px;
+  position: relative;
+  bottom: 3px;
+  margin-right: -4px;
+}
+
+.cluster-name-box > .nodes-list-name > a {
+  margin: 0px;
+  padding: 0px;
+  font-size: 24px;
+  color: #333333;
+  font-family: "Segoe UI Light","Segoe UI",Helvetica,Georgia,Tahoma,Arial;
+  font-weight: lighter;
+  line-height: 28px;
+}
+
+.nodes-list-name-count {
+  height: 38px;
+  display: inline-block;
+  margin: 0px;
+  padding: 0px;
+  color: #666666;
+  font-size: 16px;
+  line-height: 28px;
+  margin-left: 20px;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  float: left;
+}
+
+.nodes-list-name > .cluster-toolbar-item > .dropdown > ul > li {
+  padding: 10px 10px 10px 10px;
+}
+
+.nodes-list-name > .cluster-toolbar-item > .dropdown > ul > li > p {
+  display: block;
+  min-width: 200px;
+  font-size: 14px;
+  margin-bottom: 10px;
+  color: #444444;
+}
+
+.nodes-list-name > .cluster-toolbar-item > .dropdown > ul > li > p > strong {
+  display: block;
+  color: #999999;
+  font-size: 12px;
+  margin-bottom: -4px;
+  font-weight: 100;
 }
