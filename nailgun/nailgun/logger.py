@@ -62,7 +62,7 @@ class HTTPLoggerMiddleware(object):
         response_info = "Response code '%s' for %s %s from %s:%s" % (
             response_code,
             env['REQUEST_METHOD'],
-            env['REQUEST_URI'],
+            env['PATH_INFO'],
             self.__get_remote_ip(env),
             env['REMOTE_PORT'],
         )
@@ -82,7 +82,7 @@ class HTTPLoggerMiddleware(object):
 
         request_info = "Request %s %s from %s:%s %s" % (
             env['REQUEST_METHOD'],
-            env['REQUEST_URI'],
+            env['PATH_INFO'],
             self.__get_remote_ip(env),
             env['REMOTE_PORT'],
             body

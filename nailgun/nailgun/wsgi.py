@@ -13,12 +13,12 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
+from eventlet import wsgi
+import eventlet
 import os
 import sys
 import web
 from web.httpserver import StaticMiddleware
-from web.httpserver import WSGIServer
 
 curdir = os.path.dirname(__file__)
 sys.path.insert(0, curdir)
@@ -57,13 +57,13 @@ def run_server(func, server_address=('0.0.0.0', 8080)):
     """
     global server
     func = StaticMiddleware(func)
-    server = WSGIServer(server_address, func)
     print('http://%s:%d/' % server_address)
 
     try:
-        server.start()
+        wsgi.server(eventlet.listen(server_address, backlog=500),
+                    func, max_size=8000)
     except (KeyboardInterrupt, SystemExit):
-        server.stop()
+        pass
 
 
 def appstart(keepalive=False):
