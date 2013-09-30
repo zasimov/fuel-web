@@ -32,9 +32,9 @@ from nailgun.api.handlers.logs import LogSourceByNodeCollectionHandler
 from nailgun.api.handlers.logs import LogSourceCollectionHandler
 
 from nailgun.api.handlers.network_configuration \
-    import NetworkConfigurationHandler
+    import NovaNetworkConfigurationHandler
 from nailgun.api.handlers.network_configuration \
-    import NetworkConfigurationVerifyHandler
+    import NovaNetworkConfigurationVerifyHandler
 
 from nailgun.api.handlers.node import NodeCollectionHandler
 from nailgun.api.handlers.node import NodeHandler
@@ -86,9 +86,9 @@ urls = (
     r'/clusters/(?P<cluster_id>\d+)/attributes/defaults/?$',
     ClusterAttributesDefaultsHandler,
     r'/clusters/(?P<cluster_id>\d+)/network_configuration/?$',
-    NetworkConfigurationHandler,
+    NovaNetworkConfigurationHandler,
     r'/clusters/(?P<cluster_id>\d+)/network_configuration/verify/?$',
-    NetworkConfigurationVerifyHandler,
+    NovaNetworkConfigurationVerifyHandler,
 
     r'/clusters/(?P<cluster_id>\d+)/orchestrator/deployment/?$',
     DeploymentInfo,

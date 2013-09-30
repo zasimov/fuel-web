@@ -387,7 +387,7 @@ class TestNetworkManager(BaseIntegrationTest):
         same_vlan = 100
         resp = self.app.get(
             reverse(
-                'NetworkConfigurationHandler',
+                'NovaNetworkConfigurationHandler',
                 kwargs={'cluster_id': cluster_db.id}),
             headers=self.default_headers
         )
@@ -400,7 +400,7 @@ class TestNetworkManager(BaseIntegrationTest):
         same_vlan_nets_count_expect = len(same_vlan_nets) + 1
         resp = self.app.put(
             reverse(
-                'NetworkConfigurationHandler',
+                'NovaNetworkConfigurationHandler',
                 kwargs={"cluster_id": cluster_db.id}
             ),
             json.dumps(networks_data),
@@ -408,7 +408,7 @@ class TestNetworkManager(BaseIntegrationTest):
         )
         resp = self.app.get(
             reverse(
-                'NetworkConfigurationHandler',
+                'NovaNetworkConfigurationHandler',
                 kwargs={'cluster_id': cluster_db.id}),
             headers=self.default_headers
         )

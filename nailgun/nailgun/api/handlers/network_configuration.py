@@ -31,8 +31,9 @@ from nailgun.api.models import NetworkConfiguration
 from nailgun.api.models import NetworkGroup
 from nailgun.api.models import Task
 from nailgun.api.serializers.network_configuration \
-    import NetworkConfigurationSerializer
-from nailgun.api.validators.network import NetworkConfigurationValidator
+    import NovaNetworkConfigurationSerializer
+from nailgun.api.validators.network \
+    import NovaNetworkConfigurationValidator
 from nailgun.db import db
 from nailgun.logger import logger
 from nailgun.task.helpers import TaskHelper
@@ -40,11 +41,11 @@ from nailgun.task.manager import CheckNetworksTaskManager
 from nailgun.task.manager import VerifyNetworksTaskManager
 
 
-class NetworkConfigurationVerifyHandler(JSONHandler):
+class NovaNetworkConfigurationVerifyHandler(JSONHandler):
     """Network configuration verify handler
     """
 
-    validator = NetworkConfigurationValidator
+    validator = NovaNetworkConfigurationValidator
 
     @content_json
     def PUT(self, cluster_id):
@@ -80,12 +81,12 @@ class NetworkConfigurationVerifyHandler(JSONHandler):
         return TaskHandler.render(task)
 
 
-class NetworkConfigurationHandler(JSONHandler):
+class NovaNetworkConfigurationHandler(JSONHandler):
     """Network configuration handler
     """
 
-    validator = NetworkConfigurationValidator
-    serializer = NetworkConfigurationSerializer
+    validator = NovaNetworkConfigurationValidator
+    serializer = NovaNetworkConfigurationSerializer
 
     @content_json
     def GET(self, cluster_id):

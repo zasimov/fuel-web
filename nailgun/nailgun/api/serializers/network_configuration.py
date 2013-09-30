@@ -18,7 +18,7 @@ from nailgun.api.serializers.base import BasicSerializer
 from nailgun.network.manager import NetworkManager
 
 
-class NetworkConfigurationSerializer(BasicSerializer):
+class NovaNetworkConfigurationSerializer(BasicSerializer):
 
     fields = ('id', 'cluster_id', 'name', 'cidr', 'netmask',
               'gateway', 'vlan_start', 'network_size', 'amount')

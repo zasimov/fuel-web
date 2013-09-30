@@ -30,7 +30,7 @@ from nailgun.api.models import Cluster
 from nailgun.api.models import Node
 from nailgun.api.models import Release
 from nailgun.api.serializers.network_configuration \
-    import NetworkConfigurationSerializer
+    import NovaNetworkConfigurationSerializer
 from nailgun.api.validators.cluster import AttributesValidator
 from nailgun.api.validators.cluster import ClusterValidator
 from nailgun.db import db
@@ -238,6 +238,7 @@ class ClusterChangesHandler(JSONHandler):
                * 404 (cluster not found in db)
                * 400 (failed to execute task)
         """
+        net_serializer = NovaNetworkConfigurationSerializer
         cluster = self.get_object_or_404(
             Cluster,
             cluster_id,
@@ -248,7 +249,7 @@ class ClusterChangesHandler(JSONHandler):
 
         try:
             network_info = \
-                NetworkConfigurationSerializer.serialize_for_cluster(
+                net_serializer.serialize_for_cluster(
                     cluster
                 )
             logger.info(

@@ -23,7 +23,7 @@ from nailgun.db import db
 from nailgun.errors import errors
 
 
-class NetworkConfigurationValidator(BasicValidator):
+class NovaNetworkConfigurationValidator(BasicValidator):
     @classmethod
     def validate_networks_update(cls, data):
         d = cls.validate_json(data)

@@ -32,7 +32,7 @@ class TestHandlers(BaseIntegrationTest):
 
     def _get_cluster_networks(self, cluster_id):
         nets = json.loads(self.app.get(
-            reverse('NetworkConfigurationHandler',
+            reverse('NovaNetworkConfigurationHandler',
                     {"cluster_id": cluster_id}),
             headers=self.default_headers,
         ).body)["networks"]
@@ -223,7 +223,7 @@ class TestHandlers(BaseIntegrationTest):
         nets['networks'][-1]["network_size"] = 16
         nets['networks'][-1]["amount"] = 3
         resp = self.app.put(
-            reverse('NetworkConfigurationHandler',
+            reverse('NovaNetworkConfigurationHandler',
                     kwargs={'cluster_id': cluster['id']}),
             json.dumps(nets),
             headers=self.default_headers,
@@ -237,7 +237,7 @@ class TestHandlers(BaseIntegrationTest):
     def test_verify_networks(self, mocked_rpc):
         cluster = self.env.create_cluster(api=True)
         resp = self.app.put(
-            reverse('NetworkConfigurationHandler',
+            reverse('NovaNetworkConfigurationHandler',
                     kwargs={'cluster_id': cluster['id']}),
             json.dumps(self.env.generate_ui_networks(cluster["id"])),
             headers=self.default_headers
