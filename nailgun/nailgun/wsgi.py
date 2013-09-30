@@ -56,15 +56,10 @@ def run_server(func, server_address=('0.0.0.0', 8080)):
     except removed LogMiddleware because we use
     HTTPLoggerMiddleware instead
     """
-    global server
     func = StaticMiddleware(func)
     print('http://%s:%d/' % server_address)
-
-    try:
-        wsgi.server(eventlet.listen(server_address, backlog=500),
-                    func, max_size=8000)
-    except (KeyboardInterrupt, SystemExit):
-        pass
+    wsgi.server(eventlet.listen(server_address, backlog=500),
+                func, max_size=8000)
 
 
 def appstart(keepalive=False):
