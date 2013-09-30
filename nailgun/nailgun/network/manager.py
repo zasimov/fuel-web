@@ -14,20 +14,33 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from itertools import chain
+from itertools import groupby
+from itertools import ifilter
+from itertools import imap
+from itertools import islice
+
 import math
-from itertools import imap, ifilter, islice, chain, tee
 
-import web
 from sqlalchemy.sql import not_
-from netaddr import IPSet, IPNetwork, IPRange, IPAddress
+from sqlalchemy.orm import joinedload
+from netaddr import IPSet, IPRange, IPAddress
 
+
+from nailgun.api.models import Cluster
+from nailgun.api.models import IPAddr
+from nailgun.api.models import IPAddrRange
+from nailgun.api.models import IPNetwork
+from nailgun.api.models import Network
+from nailgun.api.models import NetworkAssignment
+from nailgun.api.models import NetworkGroup
+from nailgun.api.models import Node
+from nailgun.api.models import NodeNICInterface
+from nailgun.api.models import Vlan
 from nailgun.db import db
 from nailgun.errors import errors
 from nailgun.logger import logger
 from nailgun.settings import settings
-from nailgun.api.models import NetworkAssignment
-from nailgun.api.models import Node, NodeNICInterface, IPAddr, Cluster, Vlan
-from nailgun.api.models import Network, NetworkGroup, IPAddrRange
 
 
 class NetworkManager(object):
@@ -485,9 +498,8 @@ class NetworkManager(object):
                 return free_ips
         raise errors.OutOfIPs()
 
-    def _get_ips_except_admin(self, node_id=None, network_id=None):
-        """
-        Method for receiving IP addresses for node or network
+    def _get_ips_except_admin(self, node_id=None, network_id=None, joined=False):
+        """Method for receiving IP addresses for node or network
         excluding Admin Network IP address.
 
         :param node_id: Node database ID.
@@ -496,8 +508,11 @@ class NetworkManager(object):
         :type  network_id: int
         :returns: List of free IP addresses as SQLAlchemy objects.
         """
-        node_db = db().query(Node).get(node_id)
         ips = db().query(IPAddr).order_by(IPAddr.id)
+        if joined:
+            ips = ips.options(
+                joinedload('network_data'),
+                joinedload('network_data.network_group'))
         if node_id:
             ips = ips.filter_by(node=node_id)
         if network_id:
@@ -597,6 +612,7 @@ class NetworkManager(object):
         network_ids = []
         for i in ips:
             net = db().query(Network).get(i.network)
+            #
             interface = self._get_interface_by_network_name(
                 node_db.id,
                 net.name
@@ -626,19 +642,71 @@ class NetworkManager(object):
                 'dev': interface.name})
             network_ids.append(net.id)
 
-        # And now let's add networks w/o IP addresses
-        nets = db().query(Network).join(NetworkGroup).\
-            filter(NetworkGroup.cluster_id == cluster_db.id)
-        if network_ids:
-            nets = nets.filter(not_(Network.id.in_(network_ids)))
+        network_data.extend(
+            self._add_networks_wo_ips(cluster_db, network_ids, node_db))
 
-        # For now, we pass information about all networks,
-        #    so these vlans will be created on every node we call this func for
-        # However it will end up with errors if we precreate vlans in VLAN mode
-        #   in fixed network. We are skipping fixed nets in Vlan mode.
-        for net in nets.order_by(Network.id).all():
+        return network_data
+
+    def get_grouped_ips_by_node(self):
+        """returns {node.id: generator([IPAddr1, IPAddr2])}
+        """
+        ips_db = self._get_ips_except_admin(joined=True)
+        return dict(groupby(ips_db, lambda ip: ip.node))
+
+    def get_networks_grouped_by_cluster(self):
+        networks = db().query(Network).options(joinedload('network_group')).\
+            order_by(Network.id).all()
+        return dict(groupby(networks,
+                    lambda net: net.network_group.cluster_id))
+
+    def get_node_networks_optimized(self, node_db, ips_db, networks):
+        """Method for receiving data for a given node with db data provided
+        as input
+        @nodes_db - List of Node instances
+        @ips_db - generator([IPAddr1, IPAddr2])
+        """
+        cluster_db = node_db.cluster
+        if cluster_db is None:
+            # Node doesn't belong to any cluster, so it should not have nets
+            return []
+
+        network_data = []
+        network_ids = []
+        for ip in ips_db:
+            #
+            net = ip.network_data
             interface = self._get_interface_by_network_name(
-                node_db.id,
+                node_db,
+                net.name
+            )
+
+            # Get prefix from netmask instead of cidr
+            # for public network
+            if net.name == 'public':
+
+                # Convert netmask to prefix
+                prefix = str(IPNetwork(
+                    '0.0.0.0/' + net.network_group.netmask).prefixlen)
+                netmask = net.network_group.netmask
+            else:
+                prefix = str(IPNetwork(net.cidr).prefixlen)
+                netmask = str(IPNetwork(net.cidr).netmask)
+
+            network_data.append({
+                'name': net.name,
+                'vlan': net.vlan_id,
+                'ip': ip.ip_addr + '/' + prefix,
+                'netmask': netmask,
+                'brd': str(IPNetwork(net.cidr).broadcast),
+                'gateway': net.gateway,
+                'dev': interface.name})
+            network_ids.append(net.id)
+
+        nets_wo_ips = [n for n in networks if n.id not in network_ids]
+
+        for net in nets_wo_ips:
+            interface = self._get_interface_by_network_name(
+                node_db,
                 net.name
             )
 
@@ -652,6 +720,34 @@ class NetworkManager(object):
         network_data.append(self._get_admin_network(node_db))
 
         return network_data
+
+    def _add_networks_wo_ips(self, cluster_db, network_ids, node_db):
+        add_net_data = []
+        # And now let's add networks w/o IP addresses
+        nets = db().query(Network).join(NetworkGroup).\
+            filter(NetworkGroup.cluster_id == cluster_db.id)
+        if network_ids:
+            nets = nets.filter(not_(Network.id.in_(network_ids)))
+
+        # For now, we pass information about all networks,
+        #    so these vlans will be created on every node we call this func for
+        # However it will end up with errors if we precreate vlans in VLAN mode
+        #   in fixed network. We are skipping fixed nets in Vlan mode.
+        for net in nets.order_by(Network.id).all():
+            interface = self._get_interface_by_network_name(
+                node_db,
+                net.name
+            )
+
+            if net.name == 'fixed' and cluster_db.net_manager == 'VlanManager':
+                continue
+            add_net_data.append({
+                'name': net.name,
+                'vlan': net.vlan_id,
+                'dev': interface.name})
+
+        add_net_data.append(self._get_admin_network(node_db))
+        return add_net_data
 
     def _update_attrs(self, node_data):
         node_db = db().query(Node).get(node_data['id'])
@@ -760,13 +856,13 @@ class NetworkManager(object):
 
         raise errors.CanNotFindInterface()
 
-    def _get_interface_by_network_name(self, node_id, network_name):
-        """
-        Return network device which has appointed
+    def _get_interface_by_network_name(self, node, network_name):
+        """Return network device which has appointed
         network with specified network name
         """
-        node_db = db().query(Node).get(node_id)
-        for interface in node_db.interfaces:
+        if not isinstance(node, Node):
+            node = db().query(Node).get(node)
+        for interface in node.interfaces:
             for network in interface.assigned_networks:
                 if network.name == network_name:
                     return interface

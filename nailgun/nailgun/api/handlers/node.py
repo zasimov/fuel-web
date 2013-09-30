@@ -14,19 +14,22 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""
+Handlers dealing with nodes
+"""
+
+from datetime import datetime
 import json
 import traceback
-from datetime import datetime
+
+from sqlalchemy.orm import joinedload
 
 import web
 
 from nailgun.db import db
 from nailgun import notifier
 from nailgun.logger import logger
-from nailgun.errors import errors
 from nailgun.api.models import Node
-from nailgun.api.models import Network
-from nailgun.api.models import NetworkAssignment
 from nailgun.api.models import NodeNICInterface
 from nailgun.api.models import NetworkGroup
 from nailgun.network.topology import TopoChecker
@@ -35,7 +38,6 @@ from nailgun.api.validators.network import NetAssignmentValidator
 from nailgun.network.manager import NetworkManager
 from nailgun.api.models import Node, NodeAttributes
 from nailgun.api.handlers.base import JSONHandler, content_json
-from nailgun.api.handlers.base import HandlerRegistrator
 
 
 class NodeHandler(JSONHandler):
@@ -117,20 +119,49 @@ class NodeHandler(JSONHandler):
 
 class NodeCollectionHandler(JSONHandler):
 
+    fields = ('id', 'name', 'meta', 'progress', 'role',
+              'status', 'mac', 'fqdn', 'ip', 'manufacturer', 'platform_name',
+              'pending_addition', 'pending_deletion', 'os_platform',
+              'error_type', 'online', 'cluster')
+
     validator = NodeValidator
+
+    @classmethod
+    def render(cls, nodes, fields=None):
+        json_list = []
+        network_manager = NetworkManager()
+        ips_mapped = network_manager.get_grouped_ips_by_node()
+        networks_grouped = network_manager.get_networks_grouped_by_cluster()
+
+        for node in nodes:
+            try:
+                json_data = JSONHandler.render(node, fields=cls.fields)
+
+                json_data['network_data'] = network_manager.\
+                    get_node_networks_optimized(
+                        node, ips_mapped.get(node.id, []),
+                        networks_grouped.get(node.cluster_id, []))
+                json_list.append(json_data)
+            except Exception:
+                logger.error(traceback.format_exc())
+        return json_list
 
     @content_json
     def GET(self):
         user_data = web.input(cluster_id=None)
+        nodes = db().query(Node).options(
+            joinedload('cluster'),
+            joinedload('interfaces'),
+            joinedload('interfaces.assigned_networks'))
         if user_data.cluster_id == '':
-            nodes = db().query(Node).filter_by(
+            nodes = nodes.filter_by(
                 cluster_id=None).all()
         elif user_data.cluster_id:
-            nodes = db().query(Node).filter_by(
+            nodes = nodes.filter_by(
                 cluster_id=user_data.cluster_id).all()
         else:
-            nodes = db().query(Node).all()
-        return map(NodeHandler.render, nodes)
+            nodes = nodes.all()
+        return self.render(nodes)
 
     @content_json
     def POST(self):
@@ -317,7 +348,14 @@ class NodeCollectionHandler(JSONHandler):
                         node.id
                     )
                     network_manager.assign_networks_to_main_interface(node.id)
-        return map(NodeHandler.render, nodes_updated)
+
+        # we need eagerload everything that is used in render
+        nodes = db().query(Node).options(
+            joinedload('cluster'),
+            joinedload('interfaces'),
+            joinedload('interfaces.assigned_networks')).\
+            filter(Node.id.in_([n.id for n in nodes_updated])).all()
+        return self.render(nodes)
 
 
 class NodeNICsHandler(JSONHandler):
