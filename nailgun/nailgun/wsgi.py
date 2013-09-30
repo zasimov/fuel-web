@@ -16,8 +16,8 @@
 import os
 import sys
 
-from eventlet import wsgi
 import eventlet
+from eventlet import wsgi
 import web
 from web.httpserver import StaticMiddleware
 
