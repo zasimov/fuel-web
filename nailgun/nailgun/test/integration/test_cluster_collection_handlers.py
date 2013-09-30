@@ -129,25 +129,27 @@ class TestHandlers(BaseIntegrationTest):
         release.name = u"release_name_" + str(release.version)
         release.description = u"release_desc" + str(release.version)
         release.operating_system = "CentOS"
-        release.networks_metadata = [
-            {
-                "name": "floating",
-                "pool": ["172.16.0.0/12"],
-                "use_public_vlan": True
-            },
-            {
-                "name": "management",
-                "pool": ["192.168.0.0/16"]
-            },
-            {
-                "name": "storage",
-                "pool": ["192.168.0.0/16"]
-            },
-            {
-                "name": "fixed",
-                "pool": ["10.0.0.0/8"]
-            }
-        ]
+        release.networks_metadata = {
+            "nova_network": [
+                {
+                    "name": "floating",
+                    "pool": ["172.16.0.0/12"],
+                    "use_public_vlan": True
+                },
+                {
+                    "name": "management",
+                    "pool": ["192.168.0.0/16"]
+                },
+                {
+                    "name": "storage",
+                    "pool": ["192.168.0.0/16"]
+                },
+                {
+                    "name": "fixed",
+                    "pool": ["10.0.0.0/8"]
+                }
+            ]
+        }
         release.attributes_metadata = {
             "editable": {
                 "keystone": {

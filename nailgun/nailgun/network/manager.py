@@ -155,13 +155,15 @@ class NetworkManager(object):
                     *global_params.parameters["vlan_range"]
                 )
             ) - set(used_vlans)
-            if not free_vlans or len(free_vlans) < len(networks_metadata):
+            if not free_vlans or len(free_vlans) < len(
+                networks_metadata["nova_network"]
+            ):
                 raise errors.OutOfVLANs()
             return sorted(list(free_vlans))
 
         public_vlan = _free_vlans()[0]
         used_vlans.append(public_vlan)
-        for network in networks_metadata:
+        for network in networks_metadata["nova_network"]:
             free_vlans = _free_vlans()
             vlan_start = public_vlan if network.get("use_public_vlan") \
                 else free_vlans[0]

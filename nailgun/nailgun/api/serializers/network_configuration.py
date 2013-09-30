@@ -42,7 +42,7 @@ class NetworkConfigurationSerializer(BasicSerializer):
             cluster.network_groups
         )
         if cluster.is_ha_mode:
-            nw_metadata = cluster.release.networks_metadata
+            nw_metadata = cluster.release.networks_metadata["nova_network"]
             net_manager = NetworkManager()
             for network in nw_metadata:
                 if network.get("assign_vip") is not False:
