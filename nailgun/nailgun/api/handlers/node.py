@@ -132,7 +132,6 @@ class NodeCollectionHandler(JSONHandler):
         network_manager = NetworkManager()
         ips_mapped = network_manager.get_grouped_ips_by_node()
         networks_grouped = network_manager.get_networks_grouped_by_cluster()
-
         for node in nodes:
             try:
                 json_data = JSONHandler.render(node, fields=cls.fields)
