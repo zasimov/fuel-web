@@ -32,6 +32,8 @@ from nailgun.api.handlers.logs import LogSourceByNodeCollectionHandler
 from nailgun.api.handlers.logs import LogSourceCollectionHandler
 
 from nailgun.api.handlers.network_configuration \
+    import NeutronNetworkConfigurationHandler
+from nailgun.api.handlers.network_configuration \
     import NovaNetworkConfigurationHandler
 from nailgun.api.handlers.network_configuration \
     import NovaNetworkConfigurationVerifyHandler
@@ -85,10 +87,14 @@ urls = (
     ClusterAttributesHandler,
     r'/clusters/(?P<cluster_id>\d+)/attributes/defaults/?$',
     ClusterAttributesDefaultsHandler,
+    # nova network-related
     r'/clusters/(?P<cluster_id>\d+)/network_configuration/?$',
     NovaNetworkConfigurationHandler,
     r'/clusters/(?P<cluster_id>\d+)/network_configuration/verify/?$',
     NovaNetworkConfigurationVerifyHandler,
+    # neutron-related
+    r'/clusters/(?P<cluster_id>\d+)/network_configuration/neutron/?$',
+    NeutronNetworkConfigurationHandler,
 
     r'/clusters/(?P<cluster_id>\d+)/orchestrator/deployment/?$',
     DeploymentInfo,

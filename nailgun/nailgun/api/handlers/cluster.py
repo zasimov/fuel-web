@@ -37,6 +37,7 @@ from nailgun.db import db
 from nailgun.errors import errors
 from nailgun.logger import logger
 from nailgun.network.manager import NetworkManager
+from nailgun.network.neutron import NeutronManager
 from nailgun.task.manager import ClusterDeletionManager
 from nailgun.task.manager import DeploymentTaskManager
 
@@ -51,6 +52,7 @@ class ClusterHandler(JSONHandler):
         "mode",
         "status",
         "grouping",
+        "net_provider",
         ("release", "*")
     )
 
@@ -173,7 +175,13 @@ class ClusterCollectionHandler(JSONHandler):
         cluster = Cluster()
         cluster.release = db().query(Release).get(data["release"])
         # TODO(NAME): use fields
-        for field in ('name', 'mode', 'net_manager'):
+        for field in (
+            'name',
+            'mode',
+            'net_manager',
+            'net_provider',
+            'net_segment_type'
+        ):
             if data.get(field):
                 setattr(cluster, field, data.get(field))
         db().add(cluster)
@@ -188,6 +196,12 @@ class ClusterCollectionHandler(JSONHandler):
         netmanager = NetworkManager()
         try:
             netmanager.create_network_groups(cluster.id)
+
+            # Neutron-related
+            if cluster.net_provider == 'neutron':
+                neutron_manager = NeutronManager()
+                neutron_manager.create_neutron_config(cluster)
+            # /Neutron-related
 
             cluster.add_pending_changes("attributes")
             cluster.add_pending_changes("networks")

@@ -30,10 +30,16 @@ from nailgun.api.models import Cluster
 from nailgun.api.models import NetworkConfiguration
 from nailgun.api.models import NetworkGroup
 from nailgun.api.models import Task
+
+from nailgun.api.serializers.network_configuration \
+    import NeutronNetworkConfigurationSerializer
 from nailgun.api.serializers.network_configuration \
     import NovaNetworkConfigurationSerializer
 from nailgun.api.validators.network \
+    import NeutronNetworkConfigurationValidator
+from nailgun.api.validators.network \
     import NovaNetworkConfigurationValidator
+
 from nailgun.db import db
 from nailgun.logger import logger
 from nailgun.task.helpers import TaskHelper
@@ -127,3 +133,20 @@ class NovaNetworkConfigurationHandler(JSONHandler):
         else:
             db().commit()
         raise web.accepted(data=data)
+
+
+class NeutronNetworkConfigurationHandler(JSONHandler):
+    """Neutron Network configuration handler
+    """
+
+    validator = NeutronNetworkConfigurationValidator
+    serializer = NeutronNetworkConfigurationSerializer
+
+    @content_json
+    def GET(self, cluster_id):
+        """:returns: JSONized network configuration for cluster.
+        :http: * 200 (OK)
+               * 404 (cluster not found in db)
+        """
+        cluster = self.get_object_or_404(Cluster, cluster_id)
+        return self.serializer.serialize_for_cluster(cluster)

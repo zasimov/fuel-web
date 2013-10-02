@@ -53,3 +53,36 @@ class NovaNetworkConfigurationSerializer(BasicSerializer):
                         network["name"]
                     )
         return result
+
+
+class NeutronNetworkConfigurationSerializer(BasicSerializer):
+
+    fields = ('id', 'cluster_id', 'name', 'cidr', 'netmask', 'gateway',
+              'vlan_start', 'vlan_end', 'network_size', 'amount')
+
+    @classmethod
+    def serialize_network_group(cls, instance, fields=None):
+        data_dict = BasicSerializer.serialize(instance, fields=cls.fields)
+        data_dict["ip_ranges"] = [
+            [ir.first, ir.last] for ir in instance.ip_ranges
+        ]
+        data_dict.setdefault("netmask", "")
+        data_dict.setdefault("gateway", "")
+        return data_dict
+
+    @classmethod
+    def serialize_for_cluster(cls, cluster):
+        result = {}
+        result['net_provider'] = cluster.net_provider
+        result['net_l23_provider'] = cluster.net_l23_provider
+        result['net_segment_type'] = cluster.net_segment_type
+        result['networks'] = map(
+            cls.serialize_network_group,
+            cluster.network_groups
+        )
+        result['neutron_parameters'] = {
+            'predefined_networks': cluster.neutron_config.predefined_networks,
+            'l2': cluster.neutron_config.l2,
+            'segmentation_type': cluster.neutron_config.segmentation_type
+        }
+        return result

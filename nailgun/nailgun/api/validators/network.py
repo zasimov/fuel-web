@@ -57,6 +57,14 @@ class NovaNetworkConfigurationValidator(BasicValidator):
         return d
 
 
+class NeutronNetworkConfigurationValidator(BasicValidator):
+    @classmethod
+    def validate(cls, data):
+        d = cls.validate_json(data)
+        # TODO(enchantner): Implement validation logic
+        return d
+
+
 class NetAssignmentValidator(BasicValidator):
     @classmethod
     def validate(cls, node):
