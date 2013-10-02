@@ -197,10 +197,11 @@ class ClusterCollectionHandler(JSONHandler):
             netmanager = NetworkManager()
         elif cluster.net_provider == 'neutron':
             netmanager = NeutronManager()
-            netmanager.create_neutron_config(cluster)
 
         try:
             netmanager.create_network_groups(cluster.id)
+            if cluster.net_provider == 'neutron':
+                netmanager.create_neutron_config(cluster)
 
             cluster.add_pending_changes("attributes")
             cluster.add_pending_changes("networks")

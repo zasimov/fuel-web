@@ -36,7 +36,7 @@ class NeutronManager(NetworkManager):
         neutron_config = NeutronConfig(
             cluster_id=cluster.id,
             parameters=meta["parameters"],
-            predefined_networks=self._generate_predefined_networks(),
+            predefined_networks=self._generate_predefined_networks(cluster),
             L2=self._generate_l2(cluster),
             L3=self._generate_l3(cluster),
             segmentation_type=cluster.net_segment_type
@@ -44,32 +44,46 @@ class NeutronManager(NetworkManager):
         db().add(neutron_config)
         db().flush()
 
-    def _generate_external_network(self):
+    def _generate_external_network(self, cluster):
+        public_cidr, public_gw = db().query(
+            NetworkGroup.cidr,
+            NetworkGroup.gateway
+        ).filter_by(
+            cluster_id=cluster.id,
+            name='public'
+        ).first()
+        net = IPNetwork(public_cidr)
         return {
             "L3": {
-                "cidr": "10.100.100.0/24",
-                "gateway": None,
+                "cidr": public_cidr,
+                "gateway": public_gw,
                 "nameservers": [],
                 "public": True,
-                "floating": "10.100.100.130:10.100.100.254"
+                "floating": [
+                    str(net[len(net) / 2]),
+                    str(net[-2])
+                ]
             }
         }
 
-    def _generate_internal_network(Self):
+    def _generate_internal_network(self, cluster):
         return {
             "L3": {
-                "cidr": "192.168.111.0/24",
-                "gateway": None,
-                "nameservers": ["8.8.4.4", "8.8.8.8"],
+                "cidr": "10.0.0.0/24",
+                "gateway": "10.0.0.1",
+                "nameservers": [
+                    "8.8.4.4",
+                    "8.8.8.8"
+                ],
                 "public": False,
                 "floating": []
             }
         }
 
-    def _generate_predefined_networks(self):
+    def _generate_predefined_networks(self, cluster):
         return {
-            "net04_ext": self._generate_external_network(),
-            "net04": self._generate_internal_network()
+            "net04_ext": self._generate_external_network(cluster),
+            "net04": self._generate_internal_network(cluster)
         }
 
     def _generate_l2(self, cluster):
