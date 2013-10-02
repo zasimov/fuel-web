@@ -88,9 +88,10 @@ urls = (
     r'/clusters/(?P<cluster_id>\d+)/attributes/defaults/?$',
     ClusterAttributesDefaultsHandler,
     # nova network-related
-    r'/clusters/(?P<cluster_id>\d+)/network_configuration/?$',
+    r'/clusters/(?P<cluster_id>\d+)/network_configuration/nova_network/?$',
     NovaNetworkConfigurationHandler,
-    r'/clusters/(?P<cluster_id>\d+)/network_configuration/verify/?$',
+    r'/clusters/(?P<cluster_id>\d+)/network_configuration/'
+    'nova_network/verify/?$',
     NovaNetworkConfigurationVerifyHandler,
     # neutron-related
     r'/clusters/(?P<cluster_id>\d+)/network_configuration/neutron/?$',

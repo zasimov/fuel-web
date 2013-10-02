@@ -80,6 +80,7 @@ class NeutronNetworkConfigurationSerializer(BasicSerializer):
             cls.serialize_network_group,
             cluster.network_groups
         )
+
         result['neutron_parameters'] = {
             'predefined_networks': cluster.neutron_config.predefined_networks,
             'L2': cluster.neutron_config.L2,

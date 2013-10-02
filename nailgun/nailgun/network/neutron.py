@@ -69,8 +69,8 @@ class NeutronManager(NetworkManager):
     def _generate_internal_network(self, cluster):
         return {
             "L3": {
-                "cidr": "10.0.0.0/24",
-                "gateway": "10.0.0.1",
+                "cidr": "192.168.111.0/24",
+                "gateway": "192.168.111.1",
                 "nameservers": [
                     "8.8.4.4",
                     "8.8.8.8"
@@ -208,3 +208,17 @@ class NeutronManager(NetworkManager):
 
             used_vlans.append(vlan_start)
             used_nets.append(str(new_net))
+
+        if cluster_db.net_segment_type == 'vlan':
+            private_network_group = NetworkGroup(
+                release=cluster_db.release.id,
+                name=network['name'],
+                cidr="none",
+                netmask="none",
+                gateway="none",
+                cluster_id=cluster_id,
+                vlan_start=0,
+                amount=1
+            )
+            db().add(private_network_group)
+            db().commit()
