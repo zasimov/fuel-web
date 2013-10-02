@@ -193,15 +193,14 @@ class ClusterCollectionHandler(JSONHandler):
         )
         attributes.generate_fields()
 
-        netmanager = NetworkManager()
+        if cluster.net_provider == 'nova_network':
+            netmanager = NetworkManager()
+        elif cluster.net_provider == 'neutron':
+            netmanager = NeutronManager()
+            netmanager.create_neutron_config(cluster)
+
         try:
             netmanager.create_network_groups(cluster.id)
-
-            # Neutron-related
-            if cluster.net_provider == 'neutron':
-                neutron_manager = NeutronManager()
-                neutron_manager.create_neutron_config(cluster)
-            # /Neutron-related
 
             cluster.add_pending_changes("attributes")
             cluster.add_pending_changes("networks")

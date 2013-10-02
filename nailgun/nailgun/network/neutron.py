@@ -14,12 +14,22 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from netaddr import IPNetwork
+from netaddr import IPRange
+from netaddr import IPSet
 
+from nailgun.api.models import Cluster
+from nailgun.api.models import GlobalParameters
+from nailgun.api.models import IPAddrRange
+from nailgun.api.models import NetworkGroup
 from nailgun.api.models import NeutronConfig
 from nailgun.db import db
+from nailgun.errors import errors
+from nailgun.logger import logger
+from nailgun.network.manager import NetworkManager
 
 
-class NeutronManager(object):
+class NeutronManager(NetworkManager):
 
     def create_neutron_config(self, cluster):
         meta = cluster.release.networks_metadata["neutron"]["config"]
@@ -27,73 +37,160 @@ class NeutronManager(object):
             cluster_id=cluster.id,
             parameters=meta["parameters"],
             predefined_networks=self._generate_predefined_networks(),
-            l2=self._generate_l2(),
-            l3=self._generate_l3(),
+            L2=self._generate_l2(cluster),
+            L3=self._generate_l3(cluster),
             segmentation_type=cluster.net_segment_type
         )
         db().add(neutron_config)
         db().flush()
 
-    def _generate_predefined_networks(self):
+    def _generate_external_network(self):
         return {
-            "net04_ext": {
-                "shared": False,
-                "L2": {
-                    "router_ext": True,
-                    "network_type": "flat",
-                    "physnet": "physnet1"
-                },
-                "L3": {
-                    "subnet": "10.100.100.0/24",
-                    "gateway": None,
-                    "nameservers": [],
-                    "public": True,
-                    "floating": "10.100.100.130:10.100.100.254"
-                }
-            },
-            "net04": {
-                "L2": {
-                    "router_ext": False,
-                    "network_type": "gre",
-                    "physnet": "physnet2"
-                },
-                "L3": {
-                    "subnet": "192.168.111.0/24",
-                    "gateway": None,
-                    "nameservers": ["8.8.4.4", "8.8.8.8"],
-                    "public": False,
-                    "floating": None
-                }
+            "L3": {
+                "cidr": "10.100.100.0/24",
+                "gateway": None,
+                "nameservers": [],
+                "public": True,
+                "floating": "10.100.100.130:10.100.100.254"
             }
         }
 
-    def _generate_l2(self):
+    def _generate_internal_network(Self):
         return {
+            "L3": {
+                "cidr": "192.168.111.0/24",
+                "gateway": None,
+                "nameservers": ["8.8.4.4", "8.8.8.8"],
+                "public": False,
+                "floating": []
+            }
+        }
+
+    def _generate_predefined_networks(self):
+        return {
+            "net04_ext": self._generate_external_network(),
+            "net04": self._generate_internal_network()
+        }
+
+    def _generate_l2(self, cluster):
+        res = {
             "base_mac": "fa:16:3e:00:00:00",
             "segmentation_type": "vlan",
-            "tunnel_id_ranges": "1:65534",
-            "bridge_mappings": [
-                "physnet1:br-ex",
-                "physnet2:br-prv"
-            ],
-            "network_vlan_ranges": [
-                "physnet1",
-                "physnet2:1000:2999"
-            ],
             "phys_nets": {
                 "physnet1": {
                     "bridge": "br-ex",
-                    "vlan_range": ""
+                    "vlan_range": []
                 },
                 "physnet2": {
                     "bridge": "br-prv",
-                    "vlan_range": ""
+                    "vlan_range": []
                 }
             }
         }
+        if cluster.net_segment_type == 'gre':
+            res["tunnel_id_ranges"] = [1, 65534]
+        return res
 
-    def _generate_l3(self):
+    def _generate_l3(self, cluster):
         return {}
 
-    def get_predefined_networks(self, cluster):
-        return cluster.neutron_config.predefined_networks
+    # TODO(enchantner): refactor and DRY
+    def create_network_groups(self, cluster_id):
+        '''Method for creation of network groups for cluster.
+
+        :param cluster_id: Cluster database ID.
+        :type  cluster_id: int
+        :returns: None
+        :raises: errors.OutOfVLANs, errors.OutOfIPs,
+        errors.NoSuitableCIDR
+        '''
+        used_nets = []
+        used_vlans = []
+
+        global_params = db().query(GlobalParameters).first()
+
+        cluster_db = db().query(Cluster).get(cluster_id)
+
+        networks_metadata = cluster_db.release.networks_metadata
+
+        admin_network_range = db().query(IPAddrRange).filter_by(
+            network_group_id=self.get_admin_network_group_id()
+        ).all()[0]
+
+        networks_list = networks_metadata["neutron"]["networks"]
+
+        def _free_vlans():
+            free_vlans = set(
+                range(
+                    *global_params.parameters["vlan_range"]
+                )
+            ) - set(used_vlans)
+            if not free_vlans or len(free_vlans) < len(networks_list):
+                raise errors.OutOfVLANs()
+            return sorted(list(free_vlans))
+
+        public_vlan = _free_vlans()[0]
+        used_vlans.append(public_vlan)
+        for network in networks_list:
+            free_vlans = _free_vlans()
+            vlan_start = public_vlan if network.get("use_public_vlan") \
+                else free_vlans[0]
+
+            logger.debug("Found free vlan: %s", vlan_start)
+            pool = network.get('pool')
+            if not pool:
+                raise errors.InvalidNetworkPool(
+                    u"Invalid pool '{0}' for network '{1}'".format(
+                        pool,
+                        network['name']
+                    )
+                )
+
+            nets_free_set = IPSet(pool) -\
+                IPSet(
+                    IPNetwork(global_params.parameters["net_exclude"])
+                ) -\
+                IPSet(
+                    IPRange(
+                        admin_network_range.first,
+                        admin_network_range.last
+                    )
+                ) -\
+                IPSet(used_nets)
+            if not nets_free_set:
+                raise errors.OutOfIPs()
+
+            free_cidrs = sorted(list(nets_free_set._cidrs))
+            new_net = None
+            for fcidr in free_cidrs:
+                for n in fcidr.subnet(24, count=1):
+                    new_net = n
+                    break
+                if new_net:
+                    break
+            if not new_net:
+                raise errors.NoSuitableCIDR()
+
+            new_ip_range = IPAddrRange(
+                first=str(new_net[2]),
+                last=str(new_net[-2])
+            )
+
+            nw_group = NetworkGroup(
+                release=cluster_db.release.id,
+                name=network['name'],
+                cidr=str(new_net),
+                netmask=str(new_net.netmask),
+                gateway=str(new_net[1]),
+                cluster_id=cluster_id,
+                vlan_start=vlan_start,
+                amount=1
+            )
+            db().add(nw_group)
+            db().commit()
+            nw_group.ip_ranges.append(new_ip_range)
+            db().commit()
+            self.create_networks(nw_group)
+
+            used_vlans.append(vlan_start)
+            used_nets.append(str(new_net))

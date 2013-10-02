@@ -58,7 +58,7 @@ class NovaNetworkConfigurationSerializer(BasicSerializer):
 class NeutronNetworkConfigurationSerializer(BasicSerializer):
 
     fields = ('id', 'cluster_id', 'name', 'cidr', 'netmask', 'gateway',
-              'vlan_start', 'vlan_end', 'network_size', 'amount')
+              'vlan_start', 'network_size', 'amount')
 
     @classmethod
     def serialize_network_group(cls, instance, fields=None):
@@ -82,7 +82,7 @@ class NeutronNetworkConfigurationSerializer(BasicSerializer):
         )
         result['neutron_parameters'] = {
             'predefined_networks': cluster.neutron_config.predefined_networks,
-            'l2': cluster.neutron_config.l2,
+            'L2': cluster.neutron_config.l2,
             'segmentation_type': cluster.neutron_config.segmentation_type
         }
         return result

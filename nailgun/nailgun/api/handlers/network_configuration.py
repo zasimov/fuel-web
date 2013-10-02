@@ -149,4 +149,34 @@ class NeutronNetworkConfigurationHandler(JSONHandler):
                * 404 (cluster not found in db)
         """
         cluster = self.get_object_or_404(Cluster, cluster_id)
+        logger.info(
+            json.dumps(
+                self.serializer.serialize_for_cluster(cluster),
+                indent=4
+            )
+        )
+        return self.serializer.serialize_for_cluster(cluster)
+
+    @content_json
+    def PUT(self, cluster_id):
+        data = json.loads(web.data())
+        cluster = self.get_object_or_404(Cluster, cluster_id)
+
+        try:
+            if 'networks' in data:
+                self.validator.validate_networks_update(
+                    json.dumps(data)
+                )
+
+            if 'neutron_parameters' in data:
+                self.validator.validate_neutron_params(
+                    json.dumps(data)
+                )
+
+            NetworkConfiguration.update(cluster, data)
+        except Exception:
+            logger.error(traceback.format_exc())
+
+        # TODO(enchantner)
+
         return self.serializer.serialize_for_cluster(cluster)

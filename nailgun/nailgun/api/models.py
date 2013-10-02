@@ -529,7 +529,6 @@ class NetworkGroup(Base):
     network_size = Column(Integer, default=256)
     amount = Column(Integer, default=1)
     vlan_start = Column(Integer, default=1)
-    vlan_end = Column(Integer, default=4096)
     networks = relationship("Network", cascade="delete",
                             backref="network_group")
     cidr = Column(String(25))
@@ -598,14 +597,44 @@ class NetworkConfiguration(object):
         db().commit()
 
 
+class NeutronNetworkConfiguration(NetworkConfiguration):
+    @classmethod
+    def update(cls, cluster, network_configuration):
+        from nailgun.network.neutron import NeutronManager
+        network_manager = NeutronManager()
+        if 'networks' in network_configuration:
+            for ng in network_configuration['networks']:
+                ng_db = db().query(NetworkGroup).get(ng['id'])
+
+                for key, value in ng.iteritems():
+                    if key == "ip_ranges":
+                        cls.__set_ip_ranges(ng['id'], value)
+                    else:
+                        if key == 'cidr' and \
+                                not ng['name'] in ('public', 'floating'):
+                            network_manager.update_ranges_from_cidr(
+                                ng_db, value)
+
+                        setattr(ng_db, key, value)
+
+                network_manager.create_networks(ng_db)
+                ng_db.cluster.add_pending_changes('networks')
+
+        if 'neutron_parameters' in network_configuration:
+            for key, value in network_configuration['neutron_parameters']:
+                setattr(cluster.neutron_config, key, value)
+            db().add(cluster.neutron_config)
+            db().commit()
+
+
 class NeutronConfig(Base):
     __tablename__ = 'neutron_configs'
     NET_SEGMENT_TYPES = ('vlan', 'gre')
     id = Column(Integer, primary_key=True)
     cluster_id = Column(Integer, ForeignKey('clusters.id'))
     parameters = Column(JSON, default={})
-    l2 = Column(JSON, default={})
-    l3 = Column(JSON, default={})
+    L2 = Column(JSON, default={})
+    L3 = Column(JSON, default={})
     predefined_networks = Column(JSON, default={})
 
     segmentation_type = Column(
