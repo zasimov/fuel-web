@@ -60,7 +60,7 @@ function(require, utils, models, simpleMessageTemplate, createClusterWizardTempl
             this.$('.modal-body').html(this.errorMessageTemplate({logsLink: logsLink}));
         },
         displayInfoMessage: function(options) {
-            this.$el.html(this.template(options));
+            this.$el.html(views.Dialog.prototype.template(options));
             if (options.error) {
                 this.displayErrorMessage();
             }
