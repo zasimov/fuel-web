@@ -208,7 +208,13 @@ def check_for_one_attribute(params, attributes):
         attributes
     )):
         print_error(
-            "At least one of {0} is required!\n".format(", ".join(attributes))
+            "At least one of {0} is required!\n".format(
+                ", ".join(
+                    map(
+                        lambda attr: "--" + attr,
+                        attributes)
+                )
+            )
         )
 
 
@@ -341,7 +347,6 @@ def environment(params):
 def node(params):
     """List and assign available nodes to environments
     """
-    node_ids = list(chain(*params.nid))
     if not has_arguments(params) or params.list:
         acceptable_keys = ["id", "status", "name", "cluster",
                            "mac", "roles", "pending_roles", "online"]
@@ -355,6 +360,7 @@ def node(params):
             format_table(data, acceptable_keys=acceptable_keys)
         )
     elif params.set:
+        node_ids = list(chain(*params.nid))
         check_for_attributes(params, ["nid", "role", "env"])
         roles = map(str.lower, params.role)
         data = map(
@@ -386,6 +392,7 @@ def node(params):
                 )
             )
     elif params.delete:
+        node_ids = list(chain(*params.nid))
         check_for_one_attribute(params, ["env", "nid"])
         nodes_clusters = dict((node["id"], node["cluster"])
                               for node in json_api_get_request("nodes/"))
@@ -418,55 +425,101 @@ def node(params):
                 )
             )
     elif params.network or params.disk:
-        conf = "network" if params.network else "disk"
         check_for_one_attribute(params, ["default", "download", "upload"])
-        attributes = {
-            "network": ["interfaces"],
-            "disk": ["disks", "volumes"]
-        }
-        for attribute in attributes[conf]:
-            get_node_attributes(params, node_ids[0], attribute)
+        check_for_attributes(params, ["nid"])
+        node_ids = list(chain(*params.nid))
+        for node_id in node_ids:
+            if params.network:
+                get_node_attribute(
+                    params,
+                    node_id,
+                    "interfaces",
+                    [("interfaces", "default_assignment")]
+                )
+            elif params.disk:
+                get_node_attribute(
+                    params,
+                    node_id,
+                    "disks",
+                    [("volumes", ""), ("disks", "defaults")]
+                )
 
 
-def get_node_attributes(params, node_id, attribute):
-    url = "nodes/{0}/{1}".format(node_id, attribute)
-    data = json_api_get_request(url)
-    file_path = os.path.join(
+def get_node_attribute(params, node_id, upload_attribute, attributes):
+    default_url_template = "nodes/{0}/{1}/{2}".format(node_id, "{0}", "{1}")
+    node_dir_path = get_node_folder(params, node_id)
+    if params.upload:
+        upload_node_attribute(
+            default_url_template.format(upload_attribute, ""),
+            node_id,
+            node_dir_path,
+            upload_attribute
+        )
+    elif params.default or params.download:
+        for attribute, default_tail in attributes:
+            write_node_attribute(
+                default_url_template.format(
+                    attribute,
+                    default_tail if params.default else ""
+                ),
+                node_dir_path,
+                attribute
+            )
+
+
+def get_node_folder(params, node_id):
+    dir_path = os.path.join(
         os.path.abspath(os.path.curdir
                         if params.dir is None else params.dir),
-        "{0}_{1}.json".format(attribute, node_id)
+        "node_{0}".format(node_id)
     )
-    if params.upload:
-        put_response = json_api_put_request(
-            url,
-            read_json(file_path)
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    return dir_path
+
+
+def upload_node_attribute(url, node_id, node_dir_path, attribute):
+    data = read_json(
+        os.path.join(
+            node_dir_path,
+            attribute + ".json"
         )
-        if params.json:
-            print(json.dumps(put_response, indent=4))
-        else:
-            print("{0} configuration uploaded successfully.".format(attribute))
-    elif params.default:
-        default_url = url + "/defaults"
-        get_response = json_api_get_request(default_url)
-        write_json(file_path, get_response)
-        if params.json:
-            print(json.dumps(get_response, indent=4))
-        else:
-            print(
-                "Default {0} configuration downloaded successfully."
-                .format(attribute)
-            )
+    )
+    if attribute == "interfaces":
+        url = "nodes/interfaces"
+        data = [{
+            "interfaces": data,
+            "id": node_id
+        }]
+    put_response = json_api_put_request(
+        url,
+        data
+    )
+    if JSON:
+        print(json.dumps(put_response, indent=4))
     else:
-        if params.download:
-            write_json(file_path, data)
-            print(
-                "{0} configuration for node with id={1}"
-                " downloaded to {2} successfully."
-                .format(attribute, node_id, file_path)
-            )
-        else:
-            if params.json:
-                print(json.dumps(data, indent=4))
+        print("{0} configuration uploaded successfully.".format(attribute))
+
+
+def write_node_attribute(url, node_dir_path, attribute):
+    attribute_path = os.path.join(
+        node_dir_path,
+        attribute + ".json"
+    )
+    get_response = json_api_get_request(url)
+    if os.path.exists(attribute_path):
+        os.remove(attribute_path)
+    write_json(
+        attribute_path,
+        get_response
+    )
+    if params.json:
+        print(json.dumps(get_response, indent=4))
+    else:
+        print(
+            "{0} configuration successfully downloaded to {1}."
+            .format(attribute, attribute_path)
+        )
 
 
 def network(params):
@@ -1033,6 +1086,7 @@ actions = {
             get_default_arg("Get default network configuration of some node"),
             get_download_arg("Download configuration of specific node"),
             get_upload_arg("Upload configuration to specific node"),
+            get_dir_arg("Select directory to which download node attributes"),
         {
             "args": ["--node", "--node-id"],
             "params": {
