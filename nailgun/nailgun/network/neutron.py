@@ -217,7 +217,7 @@ class NeutronManager(NetworkManager):
         if cluster_db.net_segment_type == 'vlan':
             private_network_group = NetworkGroup(
                 release=cluster_db.release.id,
-                name=network['name'],
+                name="private",
                 cidr="none",
                 netmask="none",
                 gateway="none",
