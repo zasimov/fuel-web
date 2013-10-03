@@ -360,8 +360,8 @@ def node(params):
             format_table(data, acceptable_keys=acceptable_keys)
         )
     elif params.set:
-        node_ids = list(chain(*params.nid))
-        check_for_attributes(params, ["nid", "role", "env"])
+        node_ids = list(chain(*params.node))
+        check_for_attributes(params, ["node", "role", "env"])
         roles = map(str.lower, params.role)
         data = map(
             lambda node_id: {
@@ -392,11 +392,11 @@ def node(params):
                 )
             )
     elif params.delete:
-        node_ids = list(chain(*params.nid))
-        check_for_one_attribute(params, ["env", "nid"])
+        node_ids = list(chain(*params.node))
+        check_for_one_attribute(params, ["env", "node"])
         nodes_clusters = dict((node["id"], node["cluster"])
                               for node in json_api_get_request("nodes/"))
-        if not params.nid and params.env:
+        if not params.node and params.env:
             node_ids = [k for k, v in nodes_clusters.iteritems()
                         if v == int(params.env)]
         data = map(
@@ -426,8 +426,8 @@ def node(params):
             )
     elif params.network or params.disk:
         check_for_one_attribute(params, ["default", "download", "upload"])
-        check_for_attributes(params, ["nid"])
-        node_ids = list(chain(*params.nid))
+        check_for_attributes(params, ["node"])
+        node_ids = list(chain(*params.node))
         for node_id in node_ids:
             if params.network:
                 get_node_attribute(
@@ -1090,7 +1090,7 @@ actions = {
         {
             "args": ["--node", "--node-id"],
             "params": {
-                "dest": "nid",
+                "dest": "node",
                 "action": "store",
                 "nargs": '+',
                 "type": parse_node_ids,
