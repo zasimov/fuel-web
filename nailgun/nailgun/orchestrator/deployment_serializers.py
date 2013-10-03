@@ -526,10 +526,53 @@ class NeutronOrchestratorSerializer(NovaOrchestratorSerializer):
         """
         attrs = {}
         neutron_config = cluster.neutron_config
-        attrs['L3'] = neutron_config.L3
+        attrs['L3'] = neutron_config.L3 or {
+            'use_namespaces': True
+        }
         attrs['L2'] = neutron_config.L2
         attrs['L2']['segmentation_type'] = neutron_config.segmentation_type
+
+        join_range = lambda r: (":".join(map(str, r)) if r else None)
+
+        for net, net_conf in attrs['L2']['phys_nets'].iteritems():
+            net_conf['vlan_range'] = join_range(
+                net_conf['vlan_range']
+            )
+            attrs['L2']['phys_nets'][net] = net_conf
+        if attrs['L2'].get('tunnel_id_ranges'):
+            attrs['L2']['tunnel_id_ranges'] = join_range(
+                attrs['L2']['tunnel_id_ranges']
+            )
+
         attrs['predefined_networks'] = neutron_config.predefined_networks
+
+        nets_l2_configs = {
+            "net04_ext": {
+                "network_type": "flat",
+                "segment_id": None,
+                "router_ext": True,
+                "physnet": "physnet1"
+            },
+            "net04": {
+                "network_type": cluster.net_segment_type,
+                "segment_id": None,
+                "router_ext": False,
+                "physnet": "physnet2"
+            }
+        }
+
+        for net, net_conf in attrs['predefined_networks'].iteritems():
+            net_conf["L3"]["subnet"] = net_conf["L3"].pop("cidr")
+            net_conf["L3"]["floating"] = join_range(
+                net_conf["L3"]["floating"]
+            )
+
+            net_conf["L2"] = nets_l2_configs[net]
+
+            if net == "net04_ext":
+                net_conf["shared"] = False
+
+            attrs['predefined_networks'][net] = net_conf
 
         return attrs
 

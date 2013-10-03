@@ -89,7 +89,7 @@ class NeutronManager(NetworkManager):
     def _generate_l2(self, cluster):
         res = {
             "base_mac": "fa:16:3e:00:00:00",
-            "segmentation_type": "vlan",
+            "segmentation_type": cluster.net_segment_type,
             "phys_nets": {
                 "physnet1": {
                     "bridge": "br-ex",
@@ -103,6 +103,11 @@ class NeutronManager(NetworkManager):
         }
         if cluster.net_segment_type == 'gre':
             res["tunnel_id_ranges"] = [1, 65534]
+        elif cluster.net_segment_type == 'vlan':
+            res["phys_nets"]["physnet2"]["vlan_range"] = [
+                1000,
+                2999
+            ]
         return res
 
     def _generate_l3(self, cluster):
