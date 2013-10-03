@@ -56,7 +56,7 @@ class NeutronManager(NetworkManager):
         return {
             "L3": {
                 "cidr": public_cidr,
-                "gateway": public_gw,
+                "gateway": None,
                 "nameservers": [],
                 "public": True,
                 "floating": [
