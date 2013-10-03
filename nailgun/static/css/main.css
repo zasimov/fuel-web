@@ -31,7 +31,7 @@ button {
 }
 
 .btn {
-  padding: 3px 12px 5px;
+  padding: 4px 12px 4px;
 }
 
 .enable-selection {
@@ -989,7 +989,7 @@ h6.page-title {
   color: #d0d0d0;
   cursor: default;
 }
-
+/*
 .nav-tabs {
     border: none;
     margin-top: -70px;
@@ -1078,6 +1078,98 @@ h6.page-title {
   border-color: #404c5c #404c5c #404c5c;
   border-bottom-color: transparent;
 }
+*/
+
+/* Cluster Tabs Design */
+.cluster-tabs {
+    border: none;
+    margin-top: -70px;
+}
+
+.cluster-tabs li {
+  margin-left: -1px;
+  min-width: 98px;
+}
+
+.cluster-tabs li a {
+  height: 50px;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  color: #444444;
+  line-height: 20px;
+  border-color: #404c5c #404c5c #404c5c;
+  background-color: #d0d0d0;
+  background-image: -webkit-linear-gradient(bottom, #b0b0b0, #d0d0d0 30%);
+  background-image: -moz-linear-gradient(bottom, #b0b0b0, #d0d0d0 30%);
+  background-image: -o-linear-gradient(bottom, #b0b0b0, #d0d0d0 30%);
+  background-image: -ms-linear-gradient(bottom, #b0b0b0, #d0d0d0 30%);
+  background-image: linear-gradient(to top, #b0b0b0, #d0d0d0 30%);
+
+  -webkit-border-radius: 4px 4px 0 0;
+     -moz-border-radius: 4px 4px 0 0;
+          border-radius: 4px 4px 0 0;
+  -webkit-box-shadow: 0 0 0 rgba(0,0,0,.0), inset 0px 1px 0px rgba(255,255,255,.45);
+  -moz-box-shadow: 0 0 0  rgba(0,0,0,.0), inset 0px 1px 0px rgba(255,255,255,.45);
+  box-shadow: 0 0 0 rgba(0,0,0,.0), inset 0px 1px 0px rgba(255,255,255,.45);
+
+}
+
+.cluster-tabs .tab-title {
+  display: block;
+  font-size: 11px;
+  text-align: center;
+}
+
+.cluster-tabs > li > a { margin-right: 3px;}
+.cluster-tabs > li > a > b {display: block; width: 30px; height: 30px; margin: -5px auto -5px auto;}
+.tab-nodes-normal    {background: url(../img/tab_icons.png) no-repeat   0px   0px;}
+.tab-nodes-good      {background: url(../img/tab_icons.png) no-repeat -30px   0px;}
+.tab-nodes-bad       {background: url(../img/tab_icons.png) no-repeat -60px   0px;}
+
+.tab-network-normal  {background: url(../img/tab_icons.png) no-repeat   0px -30px;}
+.tab-network-good    {background: url(../img/tab_icons.png) no-repeat -30px -30px;}
+.tab-network-bad     {background: url(../img/tab_icons.png) no-repeat -60px -30px;}
+
+.tab-settings-normal {background: url(../img/tab_icons.png) no-repeat   0px -60px;}
+.tab-settings-good   {background: url(../img/tab_icons.png) no-repeat -30px -60px;}
+.tab-settings-bad    {background: url(../img/tab_icons.png) no-repeat -60px -60px;}
+
+.tab-actions-normal {background: url(../img/tab_icons.png) no-repeat   0px -90px;}
+.tab-actions-good   {background: url(../img/tab_icons.png) no-repeat -30px -90px;}
+.tab-actions-bad    {background: url(../img/tab_icons.png) no-repeat -60px -90px;}
+
+.tab-logs-normal {background: url(../img/tab_icons.png) no-repeat   0px -120px;}
+.tab-logs-good   {background: url(../img/tab_icons.png) no-repeat -30px -120px;}
+.tab-logs-bad    {background: url(../img/tab_icons.png) no-repeat -60px -120px;}
+
+.tab-redhat-normal {background: url(../img/tab_icons.png) no-repeat   0px -150px;}
+.tab-redhat-good   {background: url(../img/tab_icons.png) no-repeat -30px -150px;}
+.tab-redhat-bad    {background: url(../img/tab_icons.png) no-repeat -60px -150px;}
+
+.tab-healthcheck-normal {background: url(../img/tab_icons.png) no-repeat   0px -180px;}
+.tab-healthcheck-good   {background: url(../img/tab_icons.png) no-repeat -30px -180px;}
+.tab-healthcheck-bad    {background: url(../img/tab_icons.png) no-repeat -60px -180px;}
+
+.cluster-tabs li a:hover {
+  border-color: #404c5c #404c5c #404c5c;
+  background-image: -webkit-linear-gradient(bottom, #b8b8b8, #e8e8e8 30%);
+  background-image: -moz-linear-gradient(bottom, #b8b8b8, #e8e8e8 30%);
+  background-image: -o-linear-gradient(bottom, #b8b8b8, #e8e8e8 30%);
+  background-image: -ms-linear-gradient(bottom, #b8b8b8, #e8e8e8 30%);
+  background-image: linear-gradient(to top, #b8b8b8, #e8e8e8 30%);
+}
+
+.cluster-tabs > .active > a,
+.cluster-tabs > .active > a:hover {
+  background-image: none;
+  color: #555555;
+  cursor: pointer;
+  background-color: #ffffff;
+  border-color: #404c5c #404c5c #404c5c;
+  border-bottom-color: transparent;
+}
+/* End Cluster Tabs Design */
 
 .globalalert,
 .global-error,
