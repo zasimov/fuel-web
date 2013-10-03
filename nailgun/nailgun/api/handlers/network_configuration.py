@@ -174,3 +174,7 @@ class NeutronNetworkConfigurationHandler(JSONHandler):
             logger.error(traceback.format_exc())
 
         return self.serializer.serialize_for_cluster(cluster)
+
+
+class NeutronNetworkConfigurationVerifyHandler(JSONHandler):
+    pass
