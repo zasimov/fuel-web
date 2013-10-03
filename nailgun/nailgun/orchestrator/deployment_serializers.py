@@ -49,7 +49,7 @@ class Priority(object):
         return self.priority
 
 
-class OrchestratorSerializer(object):
+class NovaOrchestratorSerializer(object):
     """Base class for orchestrator searilization."""
 
     @classmethod
@@ -361,13 +361,13 @@ class OrchestratorSerializer(object):
                 }
 
 
-class OrchestratorHASerializer(OrchestratorSerializer):
+class NovaOrchestratorHASerializer(NovaOrchestratorSerializer):
     """Serializer for ha mode."""
 
     @classmethod
     def serialize(cls, cluster):
         serialized_nodes = super(
-            OrchestratorHASerializer, cls).serialize(cluster)
+            NovaOrchestratorHASerializer, cls).serialize(cluster)
         cls.set_primary_controller(serialized_nodes)
 
         return serialized_nodes
@@ -388,7 +388,7 @@ class OrchestratorHASerializer(OrchestratorSerializer):
           redeployed only node which was failed
         """
         nodes = super(
-            OrchestratorHASerializer, cls).get_nodes_to_deployment(cluster)
+            NovaOrchestratorHASerializer, cls).get_nodes_to_deployment(cluster)
 
         controller_nodes = []
 
@@ -430,7 +430,7 @@ class OrchestratorHASerializer(OrchestratorSerializer):
     def node_list(cls, nodes):
         """Node list
         """
-        node_list = super(OrchestratorHASerializer, cls).node_list(nodes)
+        node_list = super(NovaOrchestratorHASerializer, cls).node_list(nodes)
 
         for node in node_list:
             node['swift_zone'] = node['uid']
@@ -441,8 +441,8 @@ class OrchestratorHASerializer(OrchestratorSerializer):
     def get_common_attrs(cls, cluster):
         """Common attributes for all facts
         """
-        common_attrs = super(OrchestratorHASerializer, cls).get_common_attrs(
-            cluster)
+        common_attrs = super(NovaOrchestratorHASerializer,
+                             cls).get_common_attrs(cluster)
 
         netmanager = NetworkManager()
         common_attrs['management_vip'] = netmanager.assign_vip(
@@ -505,15 +505,50 @@ class OrchestratorHASerializer(OrchestratorSerializer):
             n['priority'] = other_nodes_prior
 
 
+class NeutronOrchestratorSerializer(NovaOrchestratorSerializer):
+    """Class for orchestrator searilization with Neutron."""
+
+    @classmethod
+    def serialize_cluster_attrs(cls, cluster):
+        """Cluster attributes."""
+        attrs = cluster.attributes.merged_attrs_values()
+        attrs['deployment_mode'] = cluster.mode
+        attrs['deployment_id'] = cluster.id
+        attrs['master_ip'] = settings.MASTER_IP
+        attrs['quantum_settings'] = cls.neutron_attrs(cluster)
+        attrs.update(cls.network_ranges(cluster))
+
+        return attrs
+
+    @classmethod
+    def neutron_attrs(cls, cluster):
+        """Network configuration for Neutron
+        """
+        attrs = {}
+        neutron_config = cluster.neutron_config
+        attrs['L3'] = neutron_config.L3
+        attrs['L2'] = neutron_config.L2
+        attrs['L2']['segmentation_type'] = neutron_config.segmentation_type
+        attrs['predefined_networks'] = neutron_config.predefined_networks
+
+        return attrs
+
+
 def serialize(cluster):
     """Serialization depends on deployment mode
     """
     cluster.prepare_for_deployment()
 
     if cluster.mode == 'multinode':
-        serializer = OrchestratorSerializer
+        if cluster.net_provider == 'nova_network':
+            serializer = NovaOrchestratorSerializer
+        else:
+            serializer = NeutronOrchestratorSerializer
     elif cluster.is_ha_mode:
         # Same serializer for all ha
-        serializer = OrchestratorHASerializer
+        if cluster.net_provider == 'nova_network':
+            serializer = NovaOrchestratorHASerializer
+        # else:
+        #     serializer = NeutronOrchestratorHASerializer
 
     return serializer.serialize(cluster)
