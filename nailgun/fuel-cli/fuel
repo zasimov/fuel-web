@@ -1199,21 +1199,20 @@ def prepare_args():
             sys.argv.insert(1, argument)
 
     # move --env or --env-id flags to beginning if declared after action
-    for argument in ["--env", "--env-id"]:
-        for arg in sys.argv:
-            if argument in arg:
-                # if declaration with '=' sign (e.g. --env-id=1)
-                if "=" in arg:
-                    index_of_env = sys.argv.index(arg)
-                    env = sys.argv.pop(index_of_env)
-                    sys.argv.insert(1, env)
-                else:
-                    index_of_env = sys.argv.index(argument)
-                    sys.argv.pop(index_of_env)
-                    env = sys.argv.pop(index_of_env)
-                    sys.argv.insert(1, env)
-                    sys.argv.insert(1, argument)
-                break
+    for arg in sys.argv[1:]:
+        if "--env" in arg:
+            # if declaration with '=' sign (e.g. --env-id=1)
+            if "=" in arg:
+                index_of_env = sys.argv.index(arg)
+                env = sys.argv.pop(index_of_env)
+                sys.argv.insert(1, env)
+            else:
+                index_of_env = sys.argv.index(arg)
+                sys.argv.pop(index_of_env)
+                env = sys.argv.pop(index_of_env)
+                sys.argv.insert(1, env)
+                sys.argv.insert(1, arg)
+            break
 
     for fact_type in [deployment, provisioning]:
         actions[fact_type.__name__] = {
