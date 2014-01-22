@@ -64,12 +64,12 @@ class NetworkManager(object):
     @classmethod
     def get_admin_network_group_id(cls):
         """Method for receiving Admin NetworkGroup ID.
-
         :type  fail_if_not_found: bool
         :returns: Admin NetworkGroup ID or None.
         :raises: errors.AdminNetworkNotFound
         """
-        return cls.get_admin_network_group().id
+        # FIXME(zasimov): catch attribute not found error
+        return None if not cls.get_admin_network_group() else cls.get_admin_network_group().id
 
     @classmethod
     def get_admin_network_group(cls):
