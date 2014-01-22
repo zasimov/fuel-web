@@ -55,16 +55,23 @@
     </div>
   <% } %>
   <%
+    console.log(cluster);
+    console.log(cluster.attributes.release.attributes.roles_metadata);
+    var message = cluster.get('nodes').nodesNotSupportFeature(cluster);
+    console.log(message);
     if (cluster.get('nodes').nodesAfterDeploymentWithRole('controller') < size) {
       canDeploy = false;
-      warning = 'controller';
+      warning = warnings['controller'];
+    } else if (message) {
+      canDeploy = false;
+      warning = message;
     } else if (!cluster.get('nodes').nodesAfterDeploymentWithRole('compute')) {
-      warning = 'compute';
+      warning = warnings['compute'];
     }
   %>
   <% if (warning) { %>
     <hr class="slim">
-    <div class="alert alert-error"><%- warnings[warning] %></div>
+    <div class="alert alert-error"><%- warning %></div>
   <% } %>
 
 </div>

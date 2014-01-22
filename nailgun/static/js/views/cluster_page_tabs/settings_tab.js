@@ -127,6 +127,7 @@ function(utils, models, commonViews, dialogViews, settingsTabTemplate, settingsG
             return this.bindTaskEvents(task) && this.render();
         },
         initialize: function(options) {
+        	console.log(this.model);
             this.model.on('change:status', this.render, this);
             this.model.get('tasks').each(this.bindTaskEvents, this);
             this.model.get('tasks').on('add', this.onNewTask, this);

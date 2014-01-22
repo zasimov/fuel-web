@@ -1,4 +1,4 @@
-<label class="node-container node-box">
+<label class="node-container node-box <%= node.attributes.meta.tpm && node.attributes.meta.tpm.supported ? "node-tpm" : "notpm" %>">
     <div class="custom-tumbler node-checkbox">
         <input type="checkbox" />
         <!-- [if !IE |(gte IE 9)]> --><span>&nbsp;</span><!-- <![endif] -->

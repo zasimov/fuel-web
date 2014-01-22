@@ -181,6 +181,25 @@ define(['utils', 'deepModel'], function(utils) {
         nodesAfterDeploymentWithRole: function(role) {
             return _.filter(this.nodesAfterDeployment(), function(node) {return _.contains(_.union(node.get('roles'), node.get('pending_roles')), role);}).length;
         },
+        nodesNotSupportFeature: function (cluster) {
+        	var roles_metadata = cluster.attributes.release.attributes.roles_metadata;
+        	var nodes = this.nodesAfterDeployment();
+        	for (var i = 0; i < nodes.length; i++) {
+        		var node = nodes[i];
+        		var node_roles = _.union(node.get('roles'), node.get('pending_roles'));
+        		for (var j = 0 ; j < node_roles.length; j++) {
+        			var role = node_roles[j];
+        			var required_features = roles_metadata[role].required_features;
+        			for (var feature in required_features) {
+        				if (!node.get('meta') || !node.get('meta')[feature] || 
+        						node.get('meta')[feature].supported != required_features[feature].required) {
+        					return required_features[feature].message;
+        				}
+        			}
+        		}
+        	}
+        	return false;
+    	},
         resources: function(resourceName) {
             var resources = this.map(function(node) {return node.resource(resourceName);});
             return _.reduce(resources, function(sum, n) {return sum + n;}, 0);
@@ -270,7 +289,7 @@ define(['utils', 'deepModel'], function(utils) {
         isNew: function() {
             return false;
         },
-        preferredOrder: ['access', 'additional_components', 'common', 'glance', 'syslog', 'storage']
+        preferredOrder: ['access', 'additional_components', 'common', 'attestation', 'glance', 'syslog', 'storage']
     });
 
     models.Disk = Backbone.Model.extend({

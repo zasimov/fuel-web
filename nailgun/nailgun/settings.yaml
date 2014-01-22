@@ -19,7 +19,7 @@ FIXTURES_TO_UPLOAD:
 DATABASE:
   engine: "postgresql"
   name: "nailgun"
-  host: "localhost"
+  host: "10.0.3.89"
   port: "5432"
   user: "nailgun"
   passwd: "nailgun"
@@ -45,9 +45,9 @@ RABBITMQ:
   fake: "0"
   hostname: "127.0.0.1"
 
-APP_LOG: &nailgun_log "/var/log/nailgun/app.log"
-API_LOG: &api_log "/var/log/nailgun/api.log"
-SYSLOG_DIR: &remote_syslog_dir "/var/log/remote/"
+APP_LOG: &nailgun_log "/home/zasimov/tmp/ericsson-fuel-web/var/log/nailgun/app.log"
+API_LOG: &api_log "/home/zasimov/tmp/ericsson-fuel-web/var/log/nailgun/api.log"
+SYSLOG_DIR: &remote_syslog_dir "/home/zasimov/tmp/ericsson-fuel-web/var/log/remote/"
 
 PATH_TO_SSH_KEY: = "/root/.ssh/id_rsa"
 PATH_TO_BOOTSTRAP_SSH_KEY: "/root/.ssh/bootstrap.rsa"
