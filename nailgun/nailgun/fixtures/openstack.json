@@ -334,6 +334,13 @@
                             "weight": 20,
                             "type": "checkbox"
                         },
+                        "attestation": {
+                            "value": false,
+                            "label": "Install Attestation Service",
+                            "description": "If selected, Attestation Service component will be installed",
+                            "weight": 20,
+                            "type": "checkbox"
+                        },
                         "heat": {
                             "value": true,
                             "label": "",

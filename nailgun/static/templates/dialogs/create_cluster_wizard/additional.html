@@ -19,6 +19,10 @@
             name: 'ceilometer',
             label: $.t("dialog.create_cluster_wizard.additional.install_ceilometer"),
             description: $.t("dialog.create_cluster_wizard.additional.install_ceilometer_description")
+        },{
+            name: 'attestation',
+            label: $.t("dialog.create_cluster_wizard.additional.install_attestation"),
+            description: $.t("dialog.create_cluster_wizard.additional.install_attestation_description")
           }
       ] %>
       <% _.each(services, function(service) { %>

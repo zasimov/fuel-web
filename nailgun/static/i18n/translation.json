@@ -360,7 +360,9 @@
                         "install_murano": "Install Murano",
                         "install_murano_description": "Murano enables Windows or Linux based datacenter services like Active Directory, IIS, Apache, Microsoft SQL and ASP.NET to be deployed on OpenStack.",
                         "install_ceilometer": "Install Ceilometer (OpenStack Telemetry)",
-                        "install_ceilometer_description": "Ceilometer provides metering and monitoring of an OpenStack cloud."
+                        "install_ceilometer_description": "Ceilometer provides metering and monitoring of an OpenStack cloud.",
+                        "install_attestation": "Install Open Attestation service",
+                        "install_attestation_description": "Open Attestation service"
                     },
                     "ready": {
                         "title": "Finish",
